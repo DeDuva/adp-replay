@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 
-class StateCompleteness(str, Enum):
+class StateCompleteness(StrEnum):
     """What a snapshot actually captured.
 
     v0 supports FILESYSTEM only. Processes, sockets, and kernel state are out of

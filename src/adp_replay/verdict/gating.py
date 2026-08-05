@@ -15,11 +15,11 @@ can be diagnosed rather than merely observed.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 
-class Verdict(str, Enum):
+class Verdict(StrEnum):
     PASS = "pass"
     FAIL = "fail"
     ERROR = "error"

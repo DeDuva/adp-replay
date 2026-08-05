@@ -39,9 +39,10 @@ ADP library and does not assume ADP's implementation language.
   `adp-replay` loudly rather than silently.
 - ADP's GraphQL endpoint may be used for read-side reporting. The recording hot path is REST.
 
-**Prerequisite (confirm before Task 1.1):** ADP must serve a pinnable API version on its native
-plane. Until that exists, pin the ADP container by image digest and treat the contract as
-provisional.
+ADP serves its contract version as `ADP-API-Version` on every response, including 401s and 404s, so
+the assertion runs before this client holds a token. The contract is **0.1.0**; ADP's
+`docs/api-compatibility.md` states what a bump promises. Pinning the ADP container by image digest
+alongside the version assertion is reasonable belt-and-braces pre-1.0.
 
 ### ADP surfaces this plan consumes
 
@@ -274,4 +275,4 @@ artifact is not worth publishing.
 ## 10. Non-goals
 
 Network cassettes. Process or VM checkpointing. Multi-agent runs. Non-Inspect harnesses. A web UI.
-OpenTelemetry export. ADP feature work beyond the pinnable-API-version prerequisite in §2.
+OpenTelemetry export. ADP feature work.
