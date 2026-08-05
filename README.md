@@ -16,8 +16,15 @@ plan of record; this README is orientation only.
 
 ## Status
 
-Scaffold. No task from the execution plan is implemented yet — every module under `src/adp_replay/`
-is a typed stub naming the task that fills it in.
+Phase 0 in progress. Tasks 0.1 and 0.2 are done — the manifest models and their self-certifying
+digest. Everything else under `src/adp_replay/` is still a typed stub naming the task that fills it
+in.
+
+A manifest verifies from the file alone, with no access to the store it came out of:
+
+```sh
+adp-replay manifest verify run-manifest.json
+```
 
 ## Layout
 
