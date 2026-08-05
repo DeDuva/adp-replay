@@ -110,6 +110,12 @@ jobs:
           DATABASE_URL: postgres://adp:adp@localhost:5432/adp
           GIT_ROOT: ${{ github.workspace }}/.adp-git
           PORT: "3999"
+          PUBLIC_URL: http://localhost:3999
+          # Throwaway keys for a throwaway instance. They have to be *present*
+          # because ADP refuses to start unsigned, which is the right default;
+          # nothing here outlives the job.
+          SIGNING_KEY: ci-contract-signing-key
+          MIRROR_CREDENTIAL_KEY: ci-contract-mirror-key
         run: |
           mkdir -p "$GIT_ROOT"
           npx tsx src/db/migrate.ts

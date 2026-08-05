@@ -54,6 +54,10 @@ markers = [
 [tool.ruff]
 line-length = 100
 src = ["src", "tests"]
+# The generated ADP client is machine-written and carries ADP's own prose in its
+# summaries, which does not wrap to our line length. It is held to `make
+# check-generated` instead — the same reason mypy exempts it below.
+extend-exclude = ["src/adp_replay/adp/_generated"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
