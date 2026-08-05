@@ -21,8 +21,10 @@ is the only documented way to make an intent.
 from __future__ import annotations
 
 import os
+import subprocess
 import uuid
 from collections.abc import Iterator
+from pathlib import Path
 from typing import Any
 
 import httpx
@@ -36,6 +38,14 @@ from adp_replay.adp import (
     ApiVersionMismatch,
     AppendRejected,
     assert_api_version,
+)
+from adp_replay.storage import (
+    AttestationError,
+    LocalCAStore,
+    capture_tree,
+    snapshot_state,
+    state_digest,
+    verify_checkpoint,
 )
 
 pytestmark = pytest.mark.contract
@@ -99,6 +109,54 @@ def intent_id(adp_base_url: str, runner_token: str, repository: tuple[str, str])
     )
     response.raise_for_status()
     return str(response.json()["intent_id"])
+
+
+def _repo_with_a_commit(
+    adp_base_url: str, runner_token: str, tmp_path: Path
+) -> tuple[str, str, str]:
+    """A fresh ADP repository holding one real commit, pushed over git-http.
+
+    A checkpoint attests a commit, and ADP will not attest one it cannot
+    resolve, so a snapshot attestation cannot be exercised against an empty
+    repository. The credential helper is replaced rather than configured: git
+    otherwise reaches for whatever the host has installed, which on some
+    machines is an interactive prompt this test would hang on.
+    """
+    name = f"ck-{uuid.uuid4().hex[:8]}"
+    created = httpx.post(
+        f"{adp_base_url}/api/v3/user/repos",
+        headers={"Authorization": f"Bearer {runner_token}"},
+        json={"name": name},
+        timeout=30.0,
+    )
+    created.raise_for_status()
+    owner = str(created.json()["owner"]["login"])
+
+    work = tmp_path / "git" / name
+    work.mkdir(parents=True)
+
+    def git(*args: str) -> str:
+        helper = f"!f(){{ echo username=x; echo password={runner_token}; }};f"
+        result = subprocess.run(
+            ["git", "-c", "credential.helper=", "-c", f"credential.helper={helper}", *args],
+            cwd=work,
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        if result.returncode != 0:
+            raise AssertionError(f"git {args[0]} failed: {result.stderr}")
+        return result.stdout.strip()
+
+    git("init", "-q", "-b", "main")
+    git("config", "user.email", "contract@example.invalid")
+    git("config", "user.name", "contract")
+    (work / "a.txt").write_text("hi\n")
+    git("add", "-A")
+    git("commit", "-qm", "init")
+    git("push", "-q", f"{adp_base_url}/{owner}/{name}.git", "main")
+
+    return owner, name, git("rev-parse", "HEAD")
 
 
 @pytest.fixture
@@ -238,6 +296,57 @@ def test_an_event_without_a_payload_is_accepted(
     owner, repo = repository
     receipt = client.append_events(owner, repo, session_id, [{"kind": "message"}])
     assert receipt.appended == 1
+
+
+def test_a_snapshot_digest_verifies_against_the_returned_envelope(
+    adp_base_url: str, client: AdpClient, runner_token: str, tmp_path: Path
+) -> None:
+    """Task 1.1's done-condition, against a real ADP.
+
+    Needs a repository with an actual commit, because a checkpoint attests a
+    commit and ADP refuses to attest one it cannot resolve. So this pushes one
+    over git-http, which is also a small end-to-end check that the snapshot path
+    and the git path agree about the same repository.
+    """
+    owner, repo, git_sha = _repo_with_a_commit(adp_base_url, runner_token, tmp_path)
+
+    work = tmp_path / "work"
+    work.mkdir()
+    (work / "a.txt").write_text("hi\n")
+    capture = capture_tree(work)
+
+    store = LocalCAStore(tmp_path / "cas")
+    digest = store.put(capture.data)
+
+    session = client.create_session(owner, repo, harness="adp-replay")
+    state = snapshot_state(digest, entries=len(capture.entries))
+    checkpoint = client.create_checkpoint(
+        owner, repo, session["id"], git_sha=git_sha, state=state, harness="adp-replay"
+    )
+
+    attestation = verify_checkpoint(checkpoint, state=state, git_sha=git_sha)
+
+    # The binding that matters: ADP's signed envelope names the digest of bytes
+    # that never left this machine, and those bytes are still here.
+    assert attestation.state_sha256 == state_digest(state)
+    assert store.get(digest) == capture.data
+
+
+def test_the_envelope_does_not_verify_against_a_different_snapshot(
+    adp_base_url: str, client: AdpClient, runner_token: str, tmp_path: Path
+) -> None:
+    # The complement: an attestation that verified against anything would be
+    # attesting nothing.
+    owner, repo, git_sha = _repo_with_a_commit(adp_base_url, runner_token, tmp_path)
+    session = client.create_session(owner, repo, harness="adp-replay")
+
+    state = snapshot_state("sha256:" + "a" * 64)
+    checkpoint = client.create_checkpoint(
+        owner, repo, session["id"], git_sha=git_sha, state=state, harness="adp-replay"
+    )
+
+    with pytest.raises(AttestationError, match="attests state"):
+        verify_checkpoint(checkpoint, state=snapshot_state("sha256:" + "b" * 64))
 
 
 def test_a_checkpoint_against_an_unresolvable_commit_is_a_422(
