@@ -28,6 +28,9 @@ Phase 0 in progress.
 - **§2** — the ADP client, generated from ADP's `spec/openapi.yaml`, with the served contract
   asserted at startup. Contract tests run against a live ADP; what they found is
   [`docs/adp-contract-findings.md`](docs/adp-contract-findings.md).
+- **1.1, 1.2** — the content-addressed store and reproducible filesystem capture. A snapshot digest
+  recorded in a checkpoint verifies against the DSSE envelope ADP signs, with the bytes never
+  leaving the machine.
 
 Everything else under `src/adp_replay/` is still a typed stub naming the task that fills it in.
 
