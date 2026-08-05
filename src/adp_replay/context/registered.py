@@ -117,6 +117,22 @@ G0_THRESHOLD: Final = 0.85
 REGISTERED_PROVIDERS: Final[tuple[str, ...]] = ("anthropic", "openai", "google")
 MINIMUM_PROVIDERS: Final = 2
 
+# Amendment 1 (2026-08-05). A tool call's id, and a tool result's binding to it,
+# are scored preserved when the binding is reconstructable without them — at
+# most one call outstanding, so call and response pair by order alone. With two
+# or more outstanding, the binding is genuinely unrecoverable and both stay
+# transformed.
+#
+# The original rule charged a flat transform whenever the id was dropped,
+# whether or not anything had become ambiguous. docs/pre-registration.md carries
+# the amendment, the reading that prompted it, and the pre-amendment numbers —
+# which every report continues to print alongside the new ones.
+BINDING_RECOVERABLE_IS_PRESERVED: Final = True
+
+AMENDMENTS: Final[tuple[str, ...]] = (
+    "1 (2026-08-05): a dropped id is preserved when the binding is order-recoverable",
+)
+
 
 def weight_of(element_type: ElementType) -> int:
     """The registered weight of ``element_type``."""

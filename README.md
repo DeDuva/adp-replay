@@ -21,13 +21,19 @@ Phase 0 in progress.
 - **0.1, 0.2** — manifest models and their self-certifying digest.
 - **0.3a** — the context-fidelity metric and the G0 threshold are
   [pre-registered](docs/pre-registration.md), before any code that scores against them.
+- **0.3b** — the fidelity probe, with a first reading in
+  [`docs/g0-fidelity-report.md`](docs/g0-fidelity-report.md).
 
 Everything else under `src/adp_replay/` is still a typed stub naming the task that fills it in.
 
-A manifest verifies from the file alone, with no access to the store it came out of:
+**Gate G0 passes**, under the metric as amended on 2026-08-05. The first reading failed one cell of
+twelve at 0.846; [Amendment 1](docs/pre-registration.md#amendments) corrected the rule that caused
+it, and every G0 report prints the pre-amendment numbers beside the current ones so the correction
+stays checkable. The reading is round-trip-only until the registered grounding check runs.
 
 ```sh
-adp-replay manifest verify run-manifest.json
+adp-replay manifest verify run-manifest.json   # verify from the file alone
+adp-replay fidelity                            # read G0; exits non-zero when it fails
 ```
 
 ## Layout

@@ -15,6 +15,7 @@ import re
 from pathlib import Path
 
 from adp_replay.context.registered import (
+    AMENDMENTS,
     CLASSIFICATION_COEFFICIENTS,
     ELEMENT_WEIGHTS,
     G0_THRESHOLD,
@@ -99,11 +100,49 @@ def test_registration_is_dated_and_pinned_to_a_commit() -> None:
     assert "not yet registered" not in g0_section
 
 
-def test_no_scoring_code_exists_yet() -> None:
-    # Task 0.3a registers; Task 0.3b measures. The point of the ordering is that
-    # the pass mark is not settled by the work that has to clear it, so this
-    # asserts the ordering actually held at registration time.
+def test_the_threshold_is_written_down_in_exactly_one_place() -> None:
+    # Until Task 0.3b landed, this file asserted that no scoring code existed
+    # yet — the check that the pass mark was not settled by the work that has to
+    # clear it. That ordering is now history, and git holds it. What has to keep
+    # holding is the property the ordering protected: the scoring code reads the
+    # registered numbers and never carries its own copy, so the metric cannot be
+    # nudged by editing the module that measures against it.
+    threshold = str(G0_THRESHOLD)
+    package = Path(__file__).resolve().parents[1] / "src" / "adp_replay"
+
+    carriers = sorted(
+        path.relative_to(package).as_posix()
+        for path in package.rglob("*.py")
+        if threshold in path.read_text(encoding="utf-8")
+    )
+    assert carriers == ["context/registered.py"]
+
+
+def test_every_amendment_in_code_is_written_up_in_the_document() -> None:
+    # The document is what a reader is pointed at. An amendment that exists only
+    # as a constant would change a published commitment silently, which is the
+    # one thing the amendment mechanism is for preventing.
+    doc = registered_text()
+    for amendment in AMENDMENTS:
+        number = amendment.split(" ", 1)[0]
+        assert f"Amendment {number} " in doc, f"amendment {number} is not written up"
+
+
+def test_an_amendment_carries_the_numbers_that_motivated_it() -> None:
+    doc = registered_text()
+    amendments = doc.split("## Amendments", 1)[1]
+    assert "The measurement that prompted it" in amendments
+    # The failing reading itself, not a description of one.
+    assert "0.846" in amendments
+    assert "before" in amendments and "after" in amendments
+
+
+def test_the_scoring_code_reads_the_registration() -> None:
     from adp_replay.context import fidelity
 
     source = Path(fidelity.__file__).read_text(encoding="utf-8")
-    assert "NotImplementedError" in source
+    assert "from adp_replay.context.registered import" in source
+    # The weight table and the coefficients are applied through the accessors,
+    # never transcribed a second time.
+    assert "weight_of(" in source
+    assert "coefficient_of(" in source
