@@ -22,6 +22,8 @@ from __future__ import annotations
 
 import os
 import subprocess
+import sys
+import time
 import uuid
 from collections.abc import Iterator
 from pathlib import Path
@@ -39,6 +41,7 @@ from adp_replay.adp import (
     AppendRejected,
     assert_api_version,
 )
+from adp_replay.recording import Recorder, Spool
 from adp_replay.storage import (
     AttestationError,
     LocalCAStore,
@@ -413,3 +416,110 @@ def test_verify_separates_chain_integrity_from_emitter_completeness(
     assert sessions, "verify should report per-session emitter state"
     assert "emitter_tracked" in sessions[0]
     assert "emitter_complete" in sessions[0]
+
+
+# --- Task 1.4: killing the recorder -------------------------------------------
+
+
+RECORDER_CHILD = """
+import os, sys
+from adp_replay.adp import AdpClient
+from adp_replay.recording import Recorder, Spool
+
+base, runner, scorer, owner, repo, session, spool_root = sys.argv[1:8]
+client = AdpClient(base, runner_token=runner, scorer_token=scorer)
+recorder = Recorder(client, owner, repo, session, Spool(spool_root), poll_interval=0.01)
+recorder.start()
+for index in range(60):
+    recorder.record("message", payload={"i": index})
+recorder.flush(timeout=5)
+print("READY", flush=True)
+# Wait to be killed. Anything still spooled is what the parent has to recover.
+for index in range(60, 120):
+    recorder.record("message", payload={"i": index})
+sys.stdout.write("SPOOLED\\n")
+sys.stdout.flush()
+while True:
+    pass
+"""
+
+
+def test_killing_the_recorder_leaves_a_resumable_gap_free_chain(
+    adp_base_url: str,
+    runner_token: str,
+    scorer_token: str,
+    client: AdpClient,
+    repository: tuple[str, str],
+    intent_id: str,
+    tmp_path: Path,
+) -> None:
+    """Task 1.4's done-condition, with a real SIGKILL against a real ADP.
+
+    A child process records, is killed without any chance to flush, and a fresh
+    recorder opens the same spool and finishes. What ADP ends up holding has to
+    be every event exactly once, in order.
+    """
+    owner, repo = repository
+    run_id = client.create_run(owner, repo, intent_id=intent_id, orchestrator="adp-replay")["id"]
+    session = client.create_session(owner, repo, harness="adp-replay", run_id=run_id)["id"]
+    spool_root = tmp_path / "spool"
+
+    script = tmp_path / "child.py"
+    script.write_text(RECORDER_CHILD)
+
+    child = subprocess.Popen(
+        [
+            sys.executable,
+            str(script),
+            adp_base_url,
+            runner_token,
+            scorer_token,
+            owner,
+            repo,
+            str(session),
+            str(spool_root),
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    try:
+        assert child.stdout is not None
+        deadline = time.monotonic() + 60
+        while time.monotonic() < deadline:
+            if (child.stdout.readline() or "").startswith("SPOOLED"):
+                break
+        else:  # pragma: no cover - only on a hung child
+            raise AssertionError("child never spooled")
+        # SIGKILL: no cleanup, no flush, no final append. The spool on disk is
+        # the only thing that survives.
+        child.kill()
+        child.wait(timeout=30)
+    finally:
+        if child.poll() is None:  # pragma: no cover
+            child.kill()
+
+    resumed = Recorder(client, owner, repo, str(session), Spool(spool_root), poll_interval=0.01)
+    with resumed:
+        assert resumed.flush(timeout=60), "the resumed recorder did not drain the spool"
+
+    events = httpx.get(
+        f"{adp_base_url}/api/adp/repos/{owner}/{repo}/sessions/{session}/events",
+        headers={"Authorization": f"Bearer {runner_token}"},
+        params={"limit": 1000},
+        timeout=30.0,
+    )
+    events.raise_for_status()
+    payload = events.json()
+    rows = payload["events"] if isinstance(payload, dict) else payload
+
+    sequences = [row["producer_seq"] for row in rows if row.get("producer_seq") is not None]
+    assert sequences == list(range(1, 121)), "the chain ADP holds must be complete and gap-free"
+
+    # And ADP agrees, by its own counter rather than by ours: emitters_ok is the
+    # check that says nothing was withheld, which is the guarantee a resumed
+    # recorder has to preserve.
+    verified = client.verify_run(owner, repo, run_id)
+    session_state = next(s for s in verified["sessions"] if s["session_id"] == session)
+    assert session_state["emitter_tracked"] is True
+    assert session_state["emitter_complete"] is True

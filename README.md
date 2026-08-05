@@ -31,6 +31,9 @@ Phase 0 in progress.
 - **1.1, 1.2** — the content-addressed store and reproducible filesystem capture. A snapshot digest
   recorded in a checkpoint verifies against the DSSE envelope ADP signs, with the bytes never
   leaving the machine.
+- **1.4** — the recorder and its spool. A tool call never blocks on an ADP write, and a recorder
+  killed mid-run resumes into a complete, gap-free chain — checked with a real `SIGKILL` against a
+  live ADP, and confirmed by ADP's own `emitter_complete`.
 
 Everything else under `src/adp_replay/` is still a typed stub naming the task that fills it in.
 
