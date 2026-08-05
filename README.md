@@ -34,6 +34,10 @@ Phase 0 in progress.
 - **1.4** — the recorder and its spool. A tool call never blocks on an ADP write, and a recorder
   killed mid-run resumes into a complete, gap-free chain — checked with a real `SIGKILL` against a
   live ADP, and confirmed by ADP's own `emitter_complete`.
+- **1.3** — the [closure audit](docs/closure-audit.md). The auditor is done; **the corpus is not**.
+  Terminal Bench is not available here, so `tb2_closed_corpus.json` has not been built and the
+  done-condition is not met. `build_corpus` refuses to write a corpus that falls short of the
+  Task 0.4 target, so this cannot be quietly claimed later.
 
 Everything else under `src/adp_replay/` is still a typed stub naming the task that fills it in.
 
@@ -46,6 +50,7 @@ stays checkable. The reading is round-trip-only until the registered grounding c
 adp-replay manifest verify run-manifest.json   # verify from the file alone
 adp-replay fidelity                            # read G0; exits non-zero when it fails
 adp-replay power                               # recommend a corpus size
+adp-replay audit TASKS --target-tasks 170       # audit tasks for closure
 ```
 
 ## Layout
