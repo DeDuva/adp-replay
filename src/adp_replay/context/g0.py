@@ -28,6 +28,8 @@ from adp_replay.context.corpus import (
 from adp_replay.context.fidelity import FidelityScore, score_translation
 from adp_replay.context.providers import TRANSLATORS
 from adp_replay.context.registered import (
+    AMENDMENTS,
+    BINDING_RECOVERABLE_IS_PRESERVED,
     G0_THRESHOLD,
     MINIMUM_PROVIDERS,
     REGISTERED_PROVIDERS,
@@ -125,6 +127,10 @@ class G0Report:
     providers: tuple[str, ...]
     corpus_digest: str
     threshold: float = G0_THRESHOLD
+    # The same cells read under the metric as it stood before the amendments.
+    # The registration requires both to be printed: an amended threshold that
+    # only ever showed its post-amendment numbers would be unfalsifiable.
+    pre_amendment: tuple[Cell, ...] = ()
 
     @property
     def failing(self) -> tuple[Cell, ...]:
@@ -151,6 +157,17 @@ class G0Report:
             "grounding": self.grounding.value,
             "providers": list(self.providers),
             "corpus_digest": self.corpus_digest,
+            "amendments": list(AMENDMENTS),
+            "pre_amendment_cells": [
+                {
+                    "source": cell.source,
+                    "target": cell.target,
+                    "capability": cell.capability.value,
+                    "median": round(cell.median, 4),
+                    "passed": cell.passed,
+                }
+                for cell in self.pre_amendment
+            ],
             "cells": [
                 {
                     "source": cell.source,
@@ -191,6 +208,26 @@ class G0Report:
                 f"{low:.3f}-{high:.3f} | {len(cell.tasks)} | {cell.context_count} | {mark} |"
             )
 
+        if self.pre_amendment:
+            lines += [
+                "",
+                "## The same cells before the amendments",
+                "",
+                "Printed because an amended metric that only ever showed its post-amendment",
+                "numbers could not be checked. Amendments in force: " + "; ".join(AMENDMENTS) + ".",
+                "",
+                "| pair | capability | before | after | moved |",
+                "|---|---|---|---|---|",
+            ]
+            after = {(c.source, c.target, c.capability): c for c in self.cells}
+            for cell in self.pre_amendment:
+                now = after[(cell.source, cell.target, cell.capability)]
+                delta = now.median - cell.median
+                lines.append(
+                    f"| {cell.pair} | {cell.capability.value} | {cell.median:.3f} | "
+                    f"{now.median:.3f} | {delta:+.3f} |"
+                )
+
         lines += ["", "## Elements lost, by cell", ""]
         for cell in self.cells:
             lost = cell.lost
@@ -223,21 +260,32 @@ def run_probe(
         raise ValueError(f"no translator for {sorted(unknown)}")
 
     cells: list[Cell] = []
+    before: list[Cell] = []
     for source in providers:
         for target in providers:
             if source == target:
                 continue
             for capability in Capability:
                 cells.append(_cell(tasks, source, target, capability))
+                if BINDING_RECOVERABLE_IS_PRESERVED:
+                    before.append(_cell(tasks, source, target, capability, binding_carve_out=False))
 
     return G0Report(
         cells=tuple(cells),
         providers=tuple(providers),
         corpus_digest=corpus_digest(tasks),
+        pre_amendment=tuple(before),
     )
 
 
-def _cell(tasks: Sequence[CorpusTask], source: str, target: str, capability: Capability) -> Cell:
+def _cell(
+    tasks: Sequence[CorpusTask],
+    source: str,
+    target: str,
+    capability: Capability,
+    *,
+    binding_carve_out: bool = BINDING_RECOVERABLE_IS_PRESERVED,
+) -> Cell:
     source_translator = TRANSLATORS[source]
     target_translator = TRANSLATORS[target]
 
@@ -251,7 +299,11 @@ def _cell(tasks: Sequence[CorpusTask], source: str, target: str, capability: Cap
         if not contexts:
             continue
         scores = tuple(
-            score_translation(as_sourced_from(context, source_translator), target_translator)
+            score_translation(
+                as_sourced_from(context, source_translator),
+                target_translator,
+                binding_carve_out=binding_carve_out,
+            )
             for context in contexts
         )
         readings.append(TaskReading(task_id=task.task_id, scores=scores))

@@ -186,4 +186,75 @@ Required entries:
 
 ## Amendments
 
-None.
+### Amendment 1 — a dropped id is preserved when the binding is order-recoverable
+
+**Dated 2026-08-05. Decided by the repository owner. Amends "Classification: preserved, transformed,
+lost".**
+
+#### The measurement that prompted it
+
+The first G0 reading, taken after Task 0.3b landed and before this amendment:
+
+| pair | capability | median | verdict |
+|---|---|---|---|
+| anthropic->openai | fork_at_zero | 1.000 | pass |
+| anthropic->openai | fork_at_step | 0.951 | pass |
+| anthropic->google | fork_at_zero | 1.000 | pass |
+| **anthropic->google** | **fork_at_step** | **0.846** | **FAIL** |
+| openai->anthropic | fork_at_zero | 1.000 | pass |
+| openai->anthropic | fork_at_step | 1.000 | pass |
+| openai->google | fork_at_zero | 1.000 | pass |
+| openai->google | fork_at_step | 0.870 | pass |
+| google->anthropic | fork_at_zero | 1.000 | pass |
+| google->anthropic | fork_at_step | 1.000 | pass |
+| google->openai | fork_at_zero | 1.000 | pass |
+| google->openai | fork_at_step | 1.000 | pass |
+
+Grounding `round_trip_only`, corpus
+`sha256:0ffe967ad3a1d429f2a572fab6a6654466d4f00af3b9084b97f2e746e2a831f8`.
+
+One cell of twelve failed, at 0.846 against 0.85.
+
+#### The change
+
+A `tool_call`'s `id`, and a `tool_result`'s binding to it, are scored **preserved** when the binding
+is reconstructable without them — at most one call outstanding at the point the result appears, so
+call and response pair by order alone. With two or more outstanding they remain **transformed**.
+
+Everything else is unchanged: the weights, the other coefficients, the aggregation, the pass mark,
+and the provider scope. The carve-out ignores the binding attribute and only that one, so a result
+that also loses its error flag is still a transform.
+
+#### Why
+
+The original rule charged a flat transform whenever an id was dropped, whether or not anything had
+become ambiguous. For a trajectory that issues one tool call at a time — which is most of them —
+nothing is ambiguous: a format matching responses by name rather than by id reconstructs the pairing
+from order, and the replayed model sees exactly what the recorded one saw. Scoring that a loss made
+the metric report a fact about wire syntax rather than about what reached the model, and it did so on
+two weight-3 element types in every trajectory that touches a tool.
+
+The concurrent case is deliberately left alone. With two calls in flight an answer really can be
+attributed to the wrong call, and no care in the translator recovers it.
+
+#### The alternative that was rejected, and why it matters
+
+The pre-approved response to a failing cell was to drop a provider. That would have removed the third
+provider on the strength of a metric artefact, and the artefact would have stayed in place to mislead
+the next reading. Narrowing scope to avoid fixing a metric is the failure mode the pre-registration
+exists to make visible, so it is recorded here that this was the available alternative and was not
+taken.
+
+#### Effect on the reading
+
+| pair | capability | before | after |
+|---|---|---|---|
+| anthropic->google | fork_at_step | 0.846 | 0.951 |
+| openai->google | fork_at_step | 0.870 | 1.000 |
+
+The other ten cells moved by 0.000. That the amendment touched only the cells targeting the format
+whose binding it concerns is the check that it is a correction and not a general lift.
+
+G0 passes under the amended metric. **Both readings are printed in every G0 report** and the
+pre-amendment scoring remains computable in code, so this is falsifiable rather than merely
+asserted.

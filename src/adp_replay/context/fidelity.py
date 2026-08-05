@@ -24,15 +24,22 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
-from adp_replay.context.canonical import CanonicalContext, Element
+from adp_replay.context.canonical import CanonicalContext, Element, Role, normalize
 from adp_replay.context.providers.base import Translator, round_trip
 from adp_replay.context.registered import (
+    BINDING_RECOVERABLE_IS_PRESERVED,
     ELEMENT_WEIGHTS,
     Classification,
     ElementType,
     coefficient_of,
     weight_of,
 )
+
+# Amendment 1: the attribute that carries a call-to-result binding, per type.
+_BINDING_KEY = {
+    ElementType.TOOL_CALL: "id",
+    ElementType.TOOL_RESULT: "call_id",
+}
 
 
 @dataclass(frozen=True)
@@ -58,17 +65,83 @@ class FidelityScore:
     notes: dict[str, Any] = field(default_factory=dict)
 
 
-def classify(source: CanonicalContext, target: CanonicalContext) -> tuple[ElementVerdict, ...]:
+def order_recoverable_bindings(context: CanonicalContext) -> frozenset[int]:
+    """Indices of elements whose call-to-result binding survives losing its id.
+
+    Amendment 1. An assistant turn issuing exactly one tool call, answered by a
+    tool turn carrying exactly one result, pairs by order: a format that matches
+    by name rather than by id reconstructs it without ambiguity, and charging
+    that a transform would be scoring a loss the model cannot experience.
+
+    Two or more calls outstanding is the case the amendment deliberately does
+    not cover. There the answers really can be attributed to the wrong call, and
+    no care in the translator recovers it.
+    """
+    turns = context.turns()
+    if not turns:
+        return frozenset()
+
+    by_turn: dict[int, list[tuple[int, Element]]] = {}
+    for index, element in enumerate(context.elements):
+        if element.turn is not None:
+            by_turn.setdefault(element.turn, []).append((index, element))
+
+    recoverable: set[int] = set()
+    for position, turn in enumerate(turns):
+        if turn.role is not Role.ASSISTANT:
+            continue
+        calls = [
+            index
+            for index, element in by_turn.get(position, [])
+            if element.type is ElementType.TOOL_CALL
+        ]
+        if len(calls) != 1:
+            continue
+
+        answering = next(
+            (i for i in range(position + 1, len(turns)) if turns[i].role is Role.TOOL), None
+        )
+        if answering is None:
+            # The call is the last thing in the context; nothing can be
+            # misattributed to it yet.
+            recoverable.update(calls)
+            continue
+
+        results = [
+            index
+            for index, element in by_turn.get(answering, [])
+            if element.type is ElementType.TOOL_RESULT
+        ]
+        if len(results) == 1:
+            recoverable.update(calls)
+            recoverable.update(results)
+
+    return frozenset(recoverable)
+
+
+def classify(
+    source: CanonicalContext,
+    target: CanonicalContext,
+    *,
+    binding_carve_out: bool = BINDING_RECOVERABLE_IS_PRESERVED,
+) -> tuple[ElementVerdict, ...]:
     """Classify every element of ``source`` against the round-tripped ``target``.
 
     Matching consumes target elements, so two source elements cannot both take
     credit for surviving as the same one. Without that, a translator that
     collapsed three tool results into one would score as though all three
     arrived.
+
+    ``binding_carve_out`` selects Amendment 1. It is a parameter rather than a
+    constant so that the pre-amendment reading stays computable: the
+    registration requires results under the old definition to be reported
+    beside results under the new one, and an amendment that deleted its own
+    predecessor would make that impossible.
     """
     targets = list(target.elements)
     consumed: set[int] = set()
     verdicts: dict[int, Classification] = {}
+    recoverable = order_recoverable_bindings(source) if binding_carve_out else frozenset()
 
     target_by_type: dict[ElementType, list[tuple[int, Element]]] = {}
     for index, element in enumerate(targets):
@@ -89,7 +162,13 @@ def classify(source: CanonicalContext, target: CanonicalContext) -> tuple[Elemen
             target_index, candidate = candidates[position]
             if target_index in consumed:
                 continue
-            if element.normalized_payload == candidate.normalized_payload:
+            equal = element.normalized_payload == candidate.normalized_payload
+            if not equal and source_index in recoverable:
+                # Amendment 1: ignore the binding attribute, and only it. Any
+                # other difference still costs, so this cannot launder an
+                # unrelated loss through a recoverable call.
+                equal = _without_binding(element) == _without_binding(candidate)
+            if equal:
                 verdicts[source_index] = Classification.PRESERVED
                 consumed.add(target_index)
 
@@ -111,6 +190,13 @@ def classify(source: CanonicalContext, target: CanonicalContext) -> tuple[Elemen
         ElementVerdict(element, verdicts.get(index, Classification.LOST))
         for index, element in enumerate(source.elements)
     )
+
+
+def _without_binding(element: Element) -> Any:
+    key = _BINDING_KEY.get(element.type)
+    if key is None:
+        return element.normalized_payload
+    return normalize({k: v for k, v in element.payload.items() if k != key})
 
 
 def score_verdicts(verdicts: Sequence[ElementVerdict]) -> FidelityScore:
@@ -150,7 +236,10 @@ def score_verdicts(verdicts: Sequence[ElementVerdict]) -> FidelityScore:
 
 
 def score_fidelity(
-    source_context: CanonicalContext, target_context: CanonicalContext
+    source_context: CanonicalContext,
+    target_context: CanonicalContext,
+    *,
+    binding_carve_out: bool = BINDING_RECOVERABLE_IS_PRESERVED,
 ) -> FidelityScore:
     """Score how much of ``source_context`` survives translation to the target.
 
@@ -160,12 +249,21 @@ def score_fidelity(
 
     Task 0.3b.
     """
-    return score_verdicts(classify(source_context, target_context))
+    return score_verdicts(
+        classify(source_context, target_context, binding_carve_out=binding_carve_out)
+    )
 
 
-def score_translation(context: CanonicalContext, translator: Translator) -> FidelityScore:
+def score_translation(
+    context: CanonicalContext,
+    translator: Translator,
+    *,
+    binding_carve_out: bool = BINDING_RECOVERABLE_IS_PRESERVED,
+) -> FidelityScore:
     """Score ``context`` against a full round-trip through ``translator``."""
-    return score_fidelity(context, round_trip(context, translator))
+    return score_fidelity(
+        context, round_trip(context, translator), binding_carve_out=binding_carve_out
+    )
 
 
 def weighted_types() -> Mapping[str, int]:

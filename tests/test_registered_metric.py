@@ -15,6 +15,7 @@ import re
 from pathlib import Path
 
 from adp_replay.context.registered import (
+    AMENDMENTS,
     CLASSIFICATION_COEFFICIENTS,
     ELEMENT_WEIGHTS,
     G0_THRESHOLD,
@@ -115,6 +116,25 @@ def test_the_threshold_is_written_down_in_exactly_one_place() -> None:
         if threshold in path.read_text(encoding="utf-8")
     )
     assert carriers == ["context/registered.py"]
+
+
+def test_every_amendment_in_code_is_written_up_in_the_document() -> None:
+    # The document is what a reader is pointed at. An amendment that exists only
+    # as a constant would change a published commitment silently, which is the
+    # one thing the amendment mechanism is for preventing.
+    doc = registered_text()
+    for amendment in AMENDMENTS:
+        number = amendment.split(" ", 1)[0]
+        assert f"Amendment {number} " in doc, f"amendment {number} is not written up"
+
+
+def test_an_amendment_carries_the_numbers_that_motivated_it() -> None:
+    doc = registered_text()
+    amendments = doc.split("## Amendments", 1)[1]
+    assert "The measurement that prompted it" in amendments
+    # The failing reading itself, not a description of one.
+    assert "0.846" in amendments
+    assert "before" in amendments and "after" in amendments
 
 
 def test_the_scoring_code_reads_the_registration() -> None:

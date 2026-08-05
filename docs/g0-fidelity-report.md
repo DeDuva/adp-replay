@@ -1,6 +1,6 @@
 # Gate G0 — context fidelity
 
-**FAIL** — every in-scope cell must reach a median of 0.85.
+**PASS** — every in-scope cell must reach a median of 0.85.
 
 - Grounding: `round_trip_only`
 - Providers: anthropic, openai, google
@@ -11,15 +11,35 @@
 | anthropic->openai | fork_at_zero | 1.000 | 1.000-1.000 | 5 | 5 | pass |
 | anthropic->openai | fork_at_step | 0.951 | 0.885-0.962 | 5 | 8 | pass |
 | anthropic->google | fork_at_zero | 1.000 | 1.000-1.000 | 5 | 5 | pass |
-| anthropic->google | fork_at_step | 0.846 | 0.826-0.870 | 5 | 8 | **FAIL** |
+| anthropic->google | fork_at_step | 0.951 | 0.885-0.962 | 5 | 8 | pass |
 | openai->anthropic | fork_at_zero | 1.000 | 1.000-1.000 | 5 | 5 | pass |
 | openai->anthropic | fork_at_step | 1.000 | 1.000-1.000 | 5 | 8 | pass |
 | openai->google | fork_at_zero | 1.000 | 1.000-1.000 | 5 | 5 | pass |
-| openai->google | fork_at_step | 0.870 | 0.870-0.870 | 5 | 8 | pass |
+| openai->google | fork_at_step | 1.000 | 1.000-1.000 | 5 | 8 | pass |
 | google->anthropic | fork_at_zero | 1.000 | 1.000-1.000 | 5 | 5 | pass |
 | google->anthropic | fork_at_step | 1.000 | 1.000-1.000 | 5 | 8 | pass |
 | google->openai | fork_at_zero | 1.000 | 1.000-1.000 | 5 | 5 | pass |
 | google->openai | fork_at_step | 1.000 | 1.000-1.000 | 5 | 8 | pass |
+
+## The same cells before the amendments
+
+Printed because an amended metric that only ever showed its post-amendment
+numbers could not be checked. Amendments in force: 1 (2026-08-05): a dropped id is preserved when the binding is order-recoverable.
+
+| pair | capability | before | after | moved |
+|---|---|---|---|---|
+| anthropic->openai | fork_at_zero | 1.000 | 1.000 | +0.000 |
+| anthropic->openai | fork_at_step | 0.951 | 0.951 | +0.000 |
+| anthropic->google | fork_at_zero | 1.000 | 1.000 | +0.000 |
+| anthropic->google | fork_at_step | 0.846 | 0.951 | +0.105 |
+| openai->anthropic | fork_at_zero | 1.000 | 1.000 | +0.000 |
+| openai->anthropic | fork_at_step | 1.000 | 1.000 | +0.000 |
+| openai->google | fork_at_zero | 1.000 | 1.000 | +0.000 |
+| openai->google | fork_at_step | 0.870 | 1.000 | +0.130 |
+| google->anthropic | fork_at_zero | 1.000 | 1.000 | +0.000 |
+| google->anthropic | fork_at_step | 1.000 | 1.000 | +0.000 |
+| google->openai | fork_at_zero | 1.000 | 1.000 | +0.000 |
+| google->openai | fork_at_step | 1.000 | 1.000 | +0.000 |
 
 ## Elements lost, by cell
 

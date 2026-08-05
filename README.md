@@ -26,10 +26,10 @@ Phase 0 in progress.
 
 Everything else under `src/adp_replay/` is still a typed stub naming the task that fills it in.
 
-**Gate G0 does not currently pass.** One cell of twelve — `anthropic->google` at fork-at-step —
-reads 0.846 against a 0.85 mark, and the gate requires every cell to clear it. The reading is
-round-trip-only until the registered grounding check runs, and the scope decision the
-pre-registration reserves to the repository owner has not been taken.
+**Gate G0 passes**, under the metric as amended on 2026-08-05. The first reading failed one cell of
+twelve at 0.846; [Amendment 1](docs/pre-registration.md#amendments) corrected the rule that caused
+it, and every G0 report prints the pre-amendment numbers beside the current ones so the correction
+stays checkable. The reading is round-trip-only until the registered grounding check runs.
 
 ```sh
 adp-replay manifest verify run-manifest.json   # verify from the file alone

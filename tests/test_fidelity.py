@@ -60,24 +60,116 @@ def test_an_identical_element_is_preserved() -> None:
 
 
 def test_a_dropped_attribute_is_a_transform_not_a_loss() -> None:
+    # A tool definition that arrives without its description: the model can
+    # still call it, and calls it less well.
+    source = build(tools=[{"name": "bash", "description": "Run a command.", "schema": {}}])
+    stripped = build(tools=[{"name": "bash", "schema": {}}])
+
+    tool = next(v for v in classify(source, stripped) if v.element.type is TOOL_DEF)
+    assert tool.classification is Classification.TRANSFORMED
+
+
+# --- Amendment 1: a dropped id, when the binding is order-recoverable ----------
+
+
+def _one_call_trajectory(*, with_id: bool) -> object:
+    call = {"name": "bash", "arguments": {"command": "ls"}}
+    if with_id:
+        call = {"id": "c1", **call}
+    result: dict[str, object] = {"content": "ok"}
+    if with_id:
+        result = {"call_id": "c1", **result}
+    return build(
+        turns=[
+            Turn(Role.ASSISTANT, (Element(ElementType.TOOL_CALL, call),)),
+            Turn(Role.TOOL, (Element(ElementType.TOOL_RESULT, result),)),
+        ]
+    )
+
+
+def test_a_recoverable_binding_survives_losing_its_id() -> None:
+    # One call outstanding, one result: they pair by order, so a format that
+    # matches by name reconstructs the binding and the model experiences no loss.
+    verdicts = classify(_one_call_trajectory(with_id=True), _one_call_trajectory(with_id=False))
+    bindings = [
+        v for v in verdicts if v.element.type in (ElementType.TOOL_CALL, ElementType.TOOL_RESULT)
+    ]
+    assert {v.classification for v in bindings} == {Classification.PRESERVED}
+
+
+def test_the_pre_amendment_reading_stays_computable() -> None:
+    # The registration requires results under the old definition beside results
+    # under the new one. An amendment that deleted its predecessor would make
+    # that impossible.
+    verdicts = classify(
+        _one_call_trajectory(with_id=True),
+        _one_call_trajectory(with_id=False),
+        binding_carve_out=False,
+    )
+    calls = [v for v in verdicts if v.element.type is ElementType.TOOL_CALL]
+    assert [v.classification for v in calls] == [Classification.TRANSFORMED]
+
+
+def test_concurrent_calls_are_outside_the_amendment() -> None:
+    # Two calls outstanding: an answer really can be attributed to the wrong
+    # call, and no care in the translator recovers it.
+    def trajectory(*, with_id: bool) -> object:
+        def call(n: int) -> Element:
+            payload = {"name": "bash", "arguments": {"command": f"cmd{n}"}}
+            return Element(
+                ElementType.TOOL_CALL, {"id": f"c{n}", **payload} if with_id else payload
+            )
+
+        def result(n: int) -> Element:
+            payload: dict[str, object] = {"content": f"out{n}"}
+            return Element(
+                ElementType.TOOL_RESULT, {"call_id": f"c{n}", **payload} if with_id else payload
+            )
+
+        return build(
+            turns=[
+                Turn(Role.ASSISTANT, (call(1), call(2))),
+                Turn(Role.TOOL, (result(1), result(2))),
+            ]
+        )
+
+    verdicts = classify(trajectory(with_id=True), trajectory(with_id=False))
+    calls = [v for v in verdicts if v.element.type is ElementType.TOOL_CALL]
+    assert [v.classification for v in calls] == [Classification.TRANSFORMED] * 2
+
+
+def test_the_amendment_cannot_launder_an_unrelated_loss() -> None:
+    # A result that loses its error flag as well as its id is still a transform.
+    # The carve-out ignores the binding attribute and only that one.
     source = build(
         turns=[
             Turn(
                 Role.ASSISTANT,
                 (Element(ElementType.TOOL_CALL, {"id": "c1", "name": "bash", "arguments": {}}),),
-            )
+            ),
+            Turn(
+                Role.TOOL,
+                (
+                    Element(
+                        ElementType.TOOL_RESULT,
+                        {"call_id": "c1", "content": "boom", "is_error": True},
+                    ),
+                ),
+            ),
         ]
     )
-    stripped = build(
+    degraded = build(
         turns=[
             Turn(
-                Role.ASSISTANT,
-                (Element(ElementType.TOOL_CALL, {"name": "bash", "arguments": {}}),),
-            )
+                Role.ASSISTANT, (Element(ElementType.TOOL_CALL, {"name": "bash", "arguments": {}}),)
+            ),
+            Turn(Role.TOOL, (Element(ElementType.TOOL_RESULT, {"content": "boom"}),)),
         ]
     )
-    call = next(v for v in classify(source, stripped) if v.element.type is ElementType.TOOL_CALL)
-    assert call.classification is Classification.TRANSFORMED
+    result = next(
+        v for v in classify(source, degraded) if v.element.type is ElementType.TOOL_RESULT
+    )
+    assert result.classification is Classification.TRANSFORMED
 
 
 def test_a_changed_content_is_a_loss_not_a_transform() -> None:
@@ -247,8 +339,20 @@ def test_the_score_reports_what_accounts_for_the_shortfall() -> None:
     score = score_translation(source, TRANSLATORS["google"])
 
     assert "reasoning_trace" in score.lost
-    assert "tool_call" in score.transformed
     assert score.per_type["tool_definition"] == pytest.approx(1.0)
+    # One call per turn: Amendment 1 applies and the binding costs nothing.
+    assert score.per_type["tool_call"] == pytest.approx(1.0)
+
+
+def test_concurrent_calls_still_cost_a_transform_end_to_end() -> None:
+    # tb2/migrate-config issues two calls in one turn, which is the case the
+    # amendment deliberately leaves alone.
+    concurrent = next(t for t in PHASE0_CORPUS if t.task_id == "tb2/migrate-config")
+    source = as_sourced_from(concurrent.context(3), TRANSLATORS["anthropic"])
+    score = score_translation(source, TRANSLATORS["google"])
+
+    assert score.per_type["tool_call"] == pytest.approx(0.5)
+    assert score.per_type["tool_result"] == pytest.approx(0.5)
 
 
 # --- normalization ------------------------------------------------------------

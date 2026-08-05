@@ -1,6 +1,6 @@
 {
   "gate": "G0",
-  "passed": false,
+  "passed": true,
   "threshold": 0.85,
   "grounding": "round_trip_only",
   "providers": [
@@ -9,6 +9,95 @@
     "google"
   ],
   "corpus_digest": "sha256:0ffe967ad3a1d429f2a572fab6a6654466d4f00af3b9084b97f2e746e2a831f8",
+  "amendments": [
+    "1 (2026-08-05): a dropped id is preserved when the binding is order-recoverable"
+  ],
+  "pre_amendment_cells": [
+    {
+      "source": "anthropic",
+      "target": "openai",
+      "capability": "fork_at_zero",
+      "median": 1.0,
+      "passed": true
+    },
+    {
+      "source": "anthropic",
+      "target": "openai",
+      "capability": "fork_at_step",
+      "median": 0.9511,
+      "passed": true
+    },
+    {
+      "source": "anthropic",
+      "target": "google",
+      "capability": "fork_at_zero",
+      "median": 1.0,
+      "passed": true
+    },
+    {
+      "source": "anthropic",
+      "target": "google",
+      "capability": "fork_at_step",
+      "median": 0.8462,
+      "passed": false
+    },
+    {
+      "source": "openai",
+      "target": "anthropic",
+      "capability": "fork_at_zero",
+      "median": 1.0,
+      "passed": true
+    },
+    {
+      "source": "openai",
+      "target": "anthropic",
+      "capability": "fork_at_step",
+      "median": 1.0,
+      "passed": true
+    },
+    {
+      "source": "openai",
+      "target": "google",
+      "capability": "fork_at_zero",
+      "median": 1.0,
+      "passed": true
+    },
+    {
+      "source": "openai",
+      "target": "google",
+      "capability": "fork_at_step",
+      "median": 0.8696,
+      "passed": true
+    },
+    {
+      "source": "google",
+      "target": "anthropic",
+      "capability": "fork_at_zero",
+      "median": 1.0,
+      "passed": true
+    },
+    {
+      "source": "google",
+      "target": "anthropic",
+      "capability": "fork_at_step",
+      "median": 1.0,
+      "passed": true
+    },
+    {
+      "source": "google",
+      "target": "openai",
+      "capability": "fork_at_zero",
+      "median": 1.0,
+      "passed": true
+    },
+    {
+      "source": "google",
+      "target": "openai",
+      "capability": "fork_at_step",
+      "median": 1.0,
+      "passed": true
+    }
+  ],
   "cells": [
     {
       "source": "anthropic",
@@ -74,22 +163,22 @@
       "source": "anthropic",
       "target": "google",
       "capability": "fork_at_step",
-      "median": 0.8462,
+      "median": 0.9511,
       "iqr": [
-        0.8261,
-        0.8696
+        0.8846,
+        0.9615
       ],
       "tasks": 5,
       "contexts": 8,
-      "passed": false,
+      "passed": true,
       "lost": {
         "reasoning_signature": 5,
         "reasoning_trace": 5,
         "citation_annotation": 1
       },
       "transformed": {
-        "tool_call": 12,
-        "tool_result": 12,
+        "tool_result": 4,
+        "tool_call": 2,
         "document_attachment": 1
       },
       "grounding": "round_trip_only"
@@ -148,18 +237,18 @@
       "source": "openai",
       "target": "google",
       "capability": "fork_at_step",
-      "median": 0.8696,
+      "median": 1.0,
       "iqr": [
-        0.8696,
-        0.8696
+        1.0,
+        1.0
       ],
       "tasks": 5,
       "contexts": 8,
       "passed": true,
       "lost": {},
       "transformed": {
-        "tool_call": 12,
-        "tool_result": 12,
+        "tool_call": 2,
+        "tool_result": 2,
         "turn_structure": 1
       },
       "grounding": "round_trip_only"
