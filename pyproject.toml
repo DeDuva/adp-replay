@@ -1,0 +1,70 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "adp-replay"
+version = "0.0.0"
+description = "Record agent trajectories on closed-world coding tasks and replay them under substituted models."
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.11"
+authors = [{ name = "Dov Zimring" }]
+
+# Kept deliberately small. Everything here is needed to build a manifest, talk
+# to ADP, and compute a verdict — the paths that must work on any machine that
+# reads a published artifact.
+dependencies = [
+  "pydantic>=2.7",
+  "httpx>=0.27",
+]
+
+[project.optional-dependencies]
+# The harness stack is an extra, not a core dependency: analysis and
+# verification of an already-recorded experiment must not require the recorder's
+# dependencies to resolve. Versions are left open until Task 1.3/1.4 pin what
+# actually works.
+harness = [
+  "inspect-ai",
+  "terminal-bench",
+]
+dev = [
+  "pytest>=8",
+  "pytest-cov>=5",
+  "ruff>=0.5",
+  "mypy>=1.10",
+]
+
+[project.scripts]
+adp-replay = "adp_replay.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/adp_replay"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --strict-markers"
+markers = [
+  # Anything needing a live ADP instance. Excluded from the default run so a
+  # laptop with no container can still run the suite; CI runs them explicitly
+  # rather than letting a skip and a pass share an exit code.
+  "contract: requires a running ADP instance (see tests/contract)",
+]
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.mypy]
+python_version = "3.11"
+packages = ["adp_replay"]
+mypy_path = "src"
+strict = true
+# The generated ADP client is machine-written and not held to the hand-written
+# standard; the wrapper around it is.
+[[tool.mypy.overrides]]
+module = "adp_replay.adp._generated.*"
+ignore_errors = true

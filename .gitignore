@@ -1,0 +1,35 @@
+# Claude Code local state (agent worktrees, session scratch)
+.claude/
+
+# WSL / Windows alternate-data-stream artifacts
+*:Zone.Identifier
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+build/
+dist/
+
+# Tooling caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Local env
+.env
+
+# The generated ADP client is a build artifact, not source: it is regenerated
+# from ADP's spec/openapi.yaml at a pinned API version (docs/execution-plan.md
+# §2). Committing it would let a hand-edit survive regeneration.
+src/adp_replay/adp/_generated/
+
+# Recorded trajectories, snapshots, and experiment output. These are large and
+# content-addressed; they belong in a CAS root, not in git.
+.adp-replay/
+runs/
+snapshots/
