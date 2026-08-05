@@ -4,10 +4,10 @@ Asserted once at startup and never mid-experiment. A contract break discovered
 after an experiment has begun spending has already cost the corpus; the whole
 value of pinning is that it fails before that.
 
-Prerequisite: ADP's native plane (``/api/adp/...``) does not yet carry a version
-segment and its OpenAPI document declares ``0.0.0-mvp``, so there is nothing
-authoritative to pin against. Until ADP serves a pinnable version, callers pin
-the ADP container by image digest and treat the contract as provisional.
+ADP serves its contract version in an ``ADP-API-Version`` header on every
+response, including 401s and 404s, so this assertion runs before the client
+holds a token — which is the case worth catching, a client pointed at the wrong
+instance. See ADP's docs/api-compatibility.md for what a bump promises.
 """
 
 from __future__ import annotations
@@ -16,7 +16,7 @@ VERSION_HEADER = "ADP-API-Version"
 
 # The contract this checkout was generated against. Bump only alongside
 # regenerating the client and re-running the contract tests.
-EXPECTED_API_VERSION = "0.0.0-mvp"
+EXPECTED_API_VERSION = "0.1.0"
 
 
 class ApiVersionMismatch(RuntimeError):
