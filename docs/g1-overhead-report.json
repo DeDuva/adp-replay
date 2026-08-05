@@ -1,0 +1,44 @@
+{
+  "gate": "G1",
+  "passed": true,
+  "threshold": 0.1,
+  "inclusive_of_adp_round_trips": true,
+  "reference_step_seconds": 0.25,
+  "trials": 3,
+  "median_overhead": 0.0137,
+  "reference_overhead": 0.0128,
+  "measurements": [
+    {
+      "step_seconds": 0.05,
+      "steps": 40,
+      "baseline_seconds": 2.0065,
+      "recorded_seconds": 2.0682,
+      "overhead": 0.0307,
+      "passes": true
+    },
+    {
+      "step_seconds": 0.1,
+      "steps": 40,
+      "baseline_seconds": 4.0077,
+      "recorded_seconds": 4.0666,
+      "overhead": 0.0147,
+      "passes": true
+    },
+    {
+      "step_seconds": 0.25,
+      "steps": 40,
+      "baseline_seconds": 10.0073,
+      "recorded_seconds": 10.1352,
+      "overhead": 0.0128,
+      "passes": true
+    },
+    {
+      "step_seconds": 0.5,
+      "steps": 40,
+      "baseline_seconds": 20.0074,
+      "recorded_seconds": 20.0546,
+      "overhead": 0.0024,
+      "passes": true
+    }
+  ]
+}
