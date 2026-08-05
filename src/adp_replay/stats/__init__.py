@@ -5,11 +5,18 @@ Task 3.1 — exact McNemar, bootstrap CIs over tasks, ICC and variance decomposi
 """
 
 from adp_replay.stats.paired import bootstrap_ci_over_tasks, mcnemar_exact
-from adp_replay.stats.power import PowerRecommendation, recommend_design
+from adp_replay.stats.power import (
+    Assumptions,
+    PowerRecommendation,
+    recommend_design,
+    simulate_power,
+)
 
 __all__ = [
+    "Assumptions",
     "PowerRecommendation",
     "bootstrap_ci_over_tasks",
     "mcnemar_exact",
     "recommend_design",
+    "simulate_power",
 ]

@@ -137,6 +137,20 @@ def test_an_amendment_carries_the_numbers_that_motivated_it() -> None:
     assert "before" in amendments and "after" in amendments
 
 
+def test_the_experiment_design_is_registered_before_data_exists() -> None:
+    # Task 0.4's entries. The test and the resampling unit are the two that a
+    # results section would otherwise be free to choose after seeing the data.
+    design = registered_text().split("## Experiment design")[1].split("## Amendments")[0]
+
+    assert "not yet registered" not in design
+    assert "exact McNemar" in design
+    assert "tasks**, never trajectories" in design
+    assert "majority of its repetitions" in design
+    # An assumed effect size with no justification beside it is a number nobody
+    # can argue with later.
+    assert "justification" in design
+
+
 def test_the_scoring_code_reads_the_registration() -> None:
     from adp_replay.context import fidelity
 

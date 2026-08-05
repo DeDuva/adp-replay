@@ -14,6 +14,7 @@ from adp_replay import __version__
 from adp_replay.context.g0 import run_probe
 from adp_replay.context.registered import REGISTERED_PROVIDERS
 from adp_replay.manifest import ManifestEnvelope, RunManifest
+from adp_replay.stats.power import Assumptions, recommend_design, render_markdown, report
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -51,7 +52,37 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
 
+    power = sub.add_parser("power", help="Recommend a corpus size (Task 0.4)")
+    power.add_argument(
+        "--format", choices=("markdown", "json"), default="markdown", help="Report format"
+    )
+    power.add_argument("--out", type=Path, help="Write the report here instead of stdout")
+    power.add_argument("--target-power", type=float, default=0.8)
+    power.add_argument("--effect-size", type=float, help="Detectable difference in success rate")
+    power.add_argument("--base-rate", type=float, help="Success rate of the weaker model")
+    power.add_argument("--between-task-sd", type=float, help="Task-difficulty spread, logit scale")
+
     return parser
+
+
+def _power(args: argparse.Namespace) -> int:
+    assumptions = Assumptions()
+    for name in ("base_rate", "effect_size", "between_task_sd"):
+        value = getattr(args, name, None)
+        if value is not None:
+            assumptions = assumptions.replace(**{name: value})
+
+    recommendation = recommend_design(target_power=args.target_power, assumptions=assumptions)
+    rendered = (
+        json.dumps(report(recommendation), indent=2) + "\n"
+        if args.format == "json"
+        else render_markdown(recommendation)
+    )
+    if args.out:
+        args.out.write_text(rendered, encoding="utf-8")
+    else:
+        print(rendered, end="")
+    return 0
 
 
 def _load(path: Path) -> RunManifest:
@@ -118,6 +149,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.command is None:
         parser.print_help()
         return 0
+
+    if args.command == "power":
+        try:
+            return _power(args)
+        except (OSError, ValueError) as exc:
+            print(f"{exc}", file=sys.stderr)
+            return 2
 
     if args.command == "fidelity":
         try:

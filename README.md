@@ -23,6 +23,8 @@ Phase 0 in progress.
   [pre-registered](docs/pre-registration.md), before any code that scores against them.
 - **0.3b** — the fidelity probe, with a first reading in
   [`docs/g0-fidelity-report.md`](docs/g0-fidelity-report.md).
+- **0.4** — the power analysis, which sets the corpus size:
+  [`docs/power-analysis.md`](docs/power-analysis.md). **170 tasks x 3 repetitions**, power 0.806.
 
 Everything else under `src/adp_replay/` is still a typed stub naming the task that fills it in.
 
@@ -34,6 +36,7 @@ stays checkable. The reading is round-trip-only until the registered grounding c
 ```sh
 adp-replay manifest verify run-manifest.json   # verify from the file alone
 adp-replay fidelity                            # read G0; exits non-zero when it fails
+adp-replay power                               # recommend a corpus size
 ```
 
 ## Layout

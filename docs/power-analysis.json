@@ -1,0 +1,73 @@
+{
+  "target_power": 0.8,
+  "tasks": 170,
+  "repetitions": 3,
+  "power": 0.8057,
+  "trajectories": 1020,
+  "audit_target": 213,
+  "assumptions": {
+    "base_rate": 0.45,
+    "effect_size": 0.1,
+    "between_task_sd": 1.5,
+    "between_task_variance": 2.25,
+    "alpha": 0.05
+  },
+  "excluded_cheaper": [
+    {
+      "tasks": 310,
+      "repetitions": 1,
+      "power": 0.8125,
+      "trajectories": 620
+    }
+  ],
+  "min_repetitions_reason": "Task 3.1 reports ICC and a between/within variance decomposition, which is undefined at one repetition",
+  "primary_outcome": "task solved when a majority of its repetitions pass",
+  "test": "exact McNemar on paired per-task outcomes",
+  "resampling_unit": "tasks",
+  "sensitivity": {
+    "effect_size": [
+      [
+        0.05,
+        0.282
+      ],
+      [
+        0.075,
+        0.562
+      ],
+      [
+        0.1,
+        0.812
+      ],
+      [
+        0.125,
+        0.9347
+      ],
+      [
+        0.15,
+        0.9887
+      ]
+    ],
+    "between_task_sd": [
+      [
+        0.75,
+        0.7713
+      ],
+      [
+        1.0,
+        0.786
+      ],
+      [
+        1.5,
+        0.812
+      ],
+      [
+        2.0,
+        0.846
+      ],
+      [
+        2.5,
+        0.888
+      ]
+    ]
+  }
+}
