@@ -16,9 +16,13 @@ plan of record; this README is orientation only.
 
 ## Status
 
-Phase 0 in progress. Tasks 0.1 and 0.2 are done — the manifest models and their self-certifying
-digest. Everything else under `src/adp_replay/` is still a typed stub naming the task that fills it
-in.
+Phase 0 in progress.
+
+- **0.1, 0.2** — manifest models and their self-certifying digest.
+- **0.3a** — the context-fidelity metric and the G0 threshold are
+  [pre-registered](docs/pre-registration.md), before any code that scores against them.
+
+Everything else under `src/adp_replay/` is still a typed stub naming the task that fills it in.
 
 A manifest verifies from the file alone, with no access to the store it came out of:
 
