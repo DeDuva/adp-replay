@@ -1,16 +1,29 @@
-"""ADP client — a versioned REST wire contract, not a linked library.
+"""The ADP wire-contract client (docs/execution-plan.md §2).
 
-See docs/execution-plan.md §2. The client is generated from ADP's
-``spec/openapi.yaml`` into ``_generated/`` (git-ignored, regenerated, never
-hand-edited); this package is the hand-written wrapper around it.
-
-The contract is REST because ADP's implementation language may change and its
-consumers are polyglot. Nothing here may assume ADP is written in any particular
-language, and the recording hot path stays on REST regardless of what ADP's
-GraphQL endpoint offers.
+ADP is depended on over its REST API as a versioned wire contract. No ADP
+library is linked and no assumption is made about its implementation language:
+the operations come from ADP's own `spec/openapi.yaml`, vendored here and turned
+into Python by `make generate`.
 """
 
-from adp_replay.adp.client import AdpClient
-from adp_replay.adp.version import ApiVersionMismatch, assert_api_version
+from adp_replay.adp._generated import SPEC_DIGEST, SPEC_VERSION
+from adp_replay.adp.client import AdpClient, AdpError, AppendReceipt, AppendRejected
+from adp_replay.adp.version import (
+    EXPECTED_API_VERSION,
+    VERSION_HEADER,
+    ApiVersionMismatch,
+    assert_api_version,
+)
 
-__all__ = ["AdpClient", "ApiVersionMismatch", "assert_api_version"]
+__all__ = [
+    "EXPECTED_API_VERSION",
+    "SPEC_DIGEST",
+    "SPEC_VERSION",
+    "VERSION_HEADER",
+    "AdpClient",
+    "AdpError",
+    "ApiVersionMismatch",
+    "AppendReceipt",
+    "AppendRejected",
+    "assert_api_version",
+]

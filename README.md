@@ -25,6 +25,9 @@ Phase 0 in progress.
   [`docs/g0-fidelity-report.md`](docs/g0-fidelity-report.md).
 - **0.4** — the power analysis, which sets the corpus size:
   [`docs/power-analysis.md`](docs/power-analysis.md). **170 tasks x 3 repetitions**, power 0.806.
+- **§2** — the ADP client, generated from ADP's `spec/openapi.yaml`, with the served contract
+  asserted at startup. Contract tests run against a live ADP; what they found is
+  [`docs/adp-contract-findings.md`](docs/adp-contract-findings.md).
 
 Everything else under `src/adp_replay/` is still a typed stub naming the task that fills it in.
 
@@ -59,6 +62,18 @@ adp-replay power                               # recommend a corpus size
 wire contract. It does not link an ADP library and makes no assumption about ADP's implementation
 language — the client is generated from ADP's `spec/openapi.yaml`, and the served API version is
 asserted at startup.
+
+The spec is vendored at `spec/adp-openapi.json` and the client is generated from it:
+
+```sh
+make sync-spec ADP_SPEC=../adp/spec/openapi.yaml   # re-vendor (needs PyYAML)
+make generate                                      # rewrite the generated client
+make check-generated                               # CI fails while it is stale
+```
+
+Requests are typed by the spec; **responses are not**, because ADP documents them in prose without
+schemas. That is why `tests/contract/` runs against a real ADP rather than a mock, and why it is not
+optional decoration — it is the half of the contract codegen cannot cover.
 
 ADP supplies the trust properties this project needs and does not reimplement: hash-chained
 trajectory events, signed checkpoints, scorer identity, and a single verification endpoint that says

@@ -23,10 +23,17 @@ htmlcov/
 # Local env
 .env
 
-# The generated ADP client is a build artifact, not source: it is regenerated
-# from ADP's spec/openapi.yaml at a pinned API version (docs/execution-plan.md
-# §2). Committing it would let a hand-edit survive regeneration.
-src/adp_replay/adp/_generated/
+# The generated ADP client used to be ignored here, on the grounds that
+# committing it would let a hand-edit survive regeneration. It is committed now,
+# because `make check-generated` answers that worry directly: it regenerates
+# from the vendored spec and fails on any difference, so a hand-edit dies in CI
+# rather than living quietly in a working tree.
+#
+# Committing it buys three things the ignore could not. A clean `pip install`
+# yields a working package with no generation step. The vendored spec and the
+# code derived from it stay reviewable as a pair. And an ADP contract change
+# arrives as a diff to that file in the pull request that bumps it, which is the
+# loudest available form of "an ADP change breaks adp-replay loudly" (§2).
 
 # Recorded trajectories, snapshots, and experiment output. These are large and
 # content-addressed; they belong in a CAS root, not in git.
