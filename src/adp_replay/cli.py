@@ -13,6 +13,8 @@ import pydantic
 from adp_replay import __version__
 from adp_replay.context.g0 import run_probe
 from adp_replay.context.registered import REGISTERED_PROVIDERS
+from adp_replay.corpus import CorpusBelowTarget, build_corpus, discover_tasks
+from adp_replay.corpus.terminal_bench import render_markdown as render_audit
 from adp_replay.manifest import ManifestEnvelope, RunManifest
 from adp_replay.stats.power import Assumptions, recommend_design, render_markdown, report
 
@@ -62,7 +64,47 @@ def build_parser() -> argparse.ArgumentParser:
     power.add_argument("--base-rate", type=float, help="Success rate of the weaker model")
     power.add_argument("--between-task-sd", type=float, help="Task-difficulty spread, logit scale")
 
+    audit = sub.add_parser("audit", help="Audit tasks for closure (Task 1.3)")
+    audit.add_argument("root", type=Path, help="Directory holding Terminal Bench task folders")
+    audit.add_argument(
+        "--target-tasks",
+        type=int,
+        required=True,
+        help="Task count the experiment needs, from `adp-replay power` (Task 0.4)",
+    )
+    audit.add_argument("--out", type=Path, help="Write tb2_closed_corpus.json here")
+    audit.add_argument(
+        "--allow-short",
+        action="store_true",
+        help="Write the corpus even when it falls short, for inspecting an audit in progress",
+    )
+
     return parser
+
+
+def _audit(args: argparse.Namespace) -> int:
+    tasks = discover_tasks(args.root)
+    if not tasks:
+        print(f"no task directories under {args.root}", file=sys.stderr)
+        return 2
+
+    try:
+        result = build_corpus(
+            tasks,
+            target_tasks=args.target_tasks,
+            out=args.out,
+            allow_short=args.allow_short,
+            source=str(args.root),
+        )
+    except CorpusBelowTarget as short:
+        # The summary is the useful artifact even when — especially when — the
+        # corpus is not big enough, so it goes to stdout either way.
+        print(render_audit(short.audit), end="")
+        print(f"\n{short}", file=sys.stderr)
+        return 1
+
+    print(render_audit(result), end="")
+    return 0
 
 
 def _power(args: argparse.Namespace) -> int:
@@ -149,6 +191,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.command is None:
         parser.print_help()
         return 0
+
+    if args.command == "audit":
+        try:
+            return _audit(args)
+        except (OSError, ValueError) as exc:
+            print(f"{exc}", file=sys.stderr)
+            return 2
 
     if args.command == "power":
         try:
