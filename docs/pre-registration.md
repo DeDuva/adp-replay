@@ -175,14 +175,76 @@ alongside the new ones.
 
 ## Experiment design (Task 0.4)
 
-**Status: not yet registered.** Filled in when the power analysis reports.
+**Status: registered 2026-08-05.** Fixed before any data is collected. The analysis is
+`src/adp_replay/stats/power.py`; the reading is `docs/power-analysis.md`, regenerable with
+`adp-replay power`.
 
-Required entries:
+### Primary outcome and test
 
-- Target effect size and assumed variance, with their justification.
-- The recommended (T tasks, n repetitions) and the achieved power.
-- The primary outcome and the test applied to it (exact McNemar), fixed before data collection.
-- The resampling unit for confidence intervals: **tasks**, never trajectories.
+- **Primary outcome:** a task counts as **solved** by a model when a **majority of its repetitions
+  pass**. One binary outcome per (task, model), paired across models on the same task.
+- **Test:** **exact McNemar** on the paired per-task outcomes, two-sided, alpha 0.05. Exact rather
+  than the chi-square approximation because the sample size for this test is the number of
+  *discordant pairs*, not the number of tasks, and a corpus this size lands in the regime where the
+  approximation is not trustworthy.
+- **Resampling unit for confidence intervals: tasks**, never trajectories. Repetitions within a task
+  are not independent samples.
+
+These are fixed now, before data exists. The power analysis simulates this exact test rather than a
+convenient stand-in, because a design powered against one test and reported with another arrives
+underpowered on the day it is analysed.
+
+### Assumptions, and why these values
+
+Every one of them is a guess. They are recorded so that when pilot data replaces them, the
+substitution is visible.
+
+| assumption | value | justification |
+|---|---|---|
+| base success rate | 0.45 | Where frontier models sit on closed, container-scoped coding tasks. Chosen near 0.5 deliberately: that is where a paired binary comparison has the most discordant pairs to work with, so it is not a conservative choice and must be revisited if the real rate is extreme. |
+| effect size | 0.10 | The smallest difference worth publishing a model comparison over: 45% against 55%. Smaller differences are within the range that harness and scaffold choices move a result, and this project cannot separate those. |
+| between-task SD (logit) | 1.5 | Task difficulty in an agentic corpus is wildly dispersed — some tasks every model solves, some none do. 1.5 puts the middle half of tasks between roughly 20% and 72% success. |
+| alpha | 0.05 | Conventional, and fixed here rather than chosen after seeing a p-value. |
+
+### The recommendation
+
+**170 tasks x 3 repetitions**, achieving power **0.806** against a target of 0.8. That is 1020
+recorded trajectories across the two models.
+
+**Task 1.3 audits at least 213 tasks** — 1.25x the target, to absorb attrition from the closure
+audit.
+
+### Why not the cheapest design
+
+**310 tasks x 1 repetition** reaches power 0.812 for 620 trajectories, which is cheaper, and it is
+excluded. Task 3.1 commits to reporting ICC and a between-versus-within variance decomposition, and
+within-task variance is not defined at a single repetition. A design cannot be chosen on cost when it
+cannot support the analysis it exists to feed.
+
+This is recorded rather than left implicit because "we picked the cheapest design that reached power"
+is what a reader would otherwise assume, and it is not what happened.
+
+### Sensitivity
+
+The design is not fragile to the variance assumption and is fragile to the effect-size assumption.
+
+| effect size | power | | between-task SD | power |
+|---|---|---|---|---|
+| 0.05 | 0.28 | | 0.75 | 0.77 |
+| 0.075 | 0.56 | | 1.0 | 0.79 |
+| **0.10** | **0.81** | | **1.5** | **0.81** |
+| 0.125 | 0.94 | | 2.0 | 0.85 |
+| 0.15 | 0.99 | | 2.5 | 0.89 |
+
+Power *rises* with between-task spread, which reads backwards and is worth stating plainly. Holding
+the marginal success rate fixed, a wider spread of task difficulty requires a larger shift on the
+log-odds scale to move that rate by the same ten points, and the larger shift produces more
+discordant pairs — the only pairs McNemar reads.
+
+So the risk to this design is not a corpus more heterogeneous than assumed. It is a **true effect
+smaller than 0.10**: at 0.075 the design has power 0.56, and at 0.05 it has 0.28. If the two models
+under comparison turn out closer than ten points, this corpus size does not settle the question, and
+the honest report is a confidence interval rather than a verdict.
 
 ## Amendments
 
