@@ -21,6 +21,7 @@ is the only documented way to make an intent.
 from __future__ import annotations
 
 import os
+import shutil
 import subprocess
 import sys
 import time
@@ -51,6 +52,7 @@ from adp_replay.storage import (
     state_digest,
     verify_checkpoint,
 )
+from adp_replay.verdict import Verdict, gate_verdict
 
 pytestmark = pytest.mark.contract
 
@@ -427,6 +429,7 @@ import os, sys
 from adp_replay.adp import AdpClient
 from adp_replay.recording import Recorder, Spool
 from adp_replay.replay import assert_separately_authorized
+from adp_replay.verdict import Verdict, gate_verdict
 
 base, runner, scorer, owner, repo, session, spool_root = sys.argv[1:8]
 client = AdpClient(base, runner_token=runner, scorer_token=scorer)
@@ -589,3 +592,85 @@ def test_adp_calls_a_self_reported_score_what_it_is(
     # And the two agree on scorer identity: same spec, same spec_digest, so a
     # comparison across them would be refused for the right reason or not at all.
     assert self_reported.json()["spec_digest"] == independent["spec_digest"]
+
+
+# --- Task 3.3: evidence gating ------------------------------------------------
+
+
+def test_tampering_with_a_recorded_event_makes_the_verdict_an_error(
+    adp_base_url: str,
+    runner_token: str,
+    client: AdpClient,
+    repository: tuple[str, str],
+    intent_id: str,
+) -> None:
+    """Task 3.3's done-condition, with the tampering actually done.
+
+    Needs `ADP_DATABASE_URL`, because tampering means editing a stored row
+    behind ADP's back — which is the only way to test that the hash chain
+    notices. Fails rather than skips when it is missing: a gate that silently
+    stops being tested is worse than one that was never claimed.
+    """
+    database_url = os.environ.get("ADP_DATABASE_URL")
+    if not database_url:
+        pytest.fail(
+            "ADP_DATABASE_URL is not set. Task 3.3's done-condition needs to edit a "
+            "stored event behind ADP's back, and there is no honest way to check "
+            "tamper-evidence without tampering."
+        )
+
+    owner, repo = repository
+    run_id = client.create_run(owner, repo, intent_id=intent_id, orchestrator="adp-replay")["id"]
+    session = client.create_session(owner, repo, harness="adp-replay", run_id=run_id)["id"]
+    client.append_events(
+        owner,
+        repo,
+        session,
+        [
+            {"kind": "message", "producer_seq": 1, "client_event_id": "t1", "payload": {"a": 1}},
+            {"kind": "message", "producer_seq": 2, "client_event_id": "t2", "payload": {"a": 2}},
+        ],
+        producer_id="tamper-test",
+    )
+
+    # Before: the evidence stands up, so a scored PASS stays a PASS.
+    before = client.verify_run(owner, repo, run_id)
+    assert before["chains_ok"] is True
+    assert gate_verdict(Verdict.PASS, before).verdict is Verdict.PASS
+
+    _edit_stored_event(database_url, session)
+
+    after = client.verify_run(owner, repo, run_id)
+    gated = gate_verdict(Verdict.PASS, after)
+
+    assert after["chains_ok"] is False
+    assert gated.verdict is Verdict.ERROR, "an edited event must not still count as a pass"
+    assert "chains_ok" in gated.downgraded_because
+
+
+def _edit_stored_event(database_url: str, session_id: str) -> None:
+    """Rewrite a stored event's payload, leaving its chain hashes alone.
+
+    Uses `psql` where there is one — CI runners ship it — and otherwise reaches
+    into the Postgres container named by `ADP_PG_CONTAINER`, which is what a
+    laptop running the stack under Docker has.
+    """
+    statement = (
+        "update session_events set payload = '{\"a\": 999}'::jsonb "
+        f"where session_id = '{session_id}' and seq = 1"
+    )
+
+    if shutil.which("psql"):
+        command = ["psql", database_url, "-v", "ON_ERROR_STOP=1", "-c", statement]
+    elif container := os.environ.get("ADP_PG_CONTAINER"):
+        command = ["docker", "exec", container, "psql", database_url, "-c", statement]
+    else:  # pragma: no cover - environment problem
+        pytest.fail(
+            "tampering needs either psql on PATH or ADP_PG_CONTAINER naming the "
+            "Postgres container; there is no honest way to check tamper-evidence "
+            "without tampering."
+        )
+
+    result = subprocess.run(command, capture_output=True, text=True, timeout=60)
+    if result.returncode != 0:  # pragma: no cover - environment problem
+        pytest.fail(f"could not tamper with the stored event: {result.stderr or result.stdout}")

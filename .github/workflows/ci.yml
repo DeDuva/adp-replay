@@ -133,4 +133,7 @@ jobs:
       - name: Contract tests
         env:
           ADP_BASE_URL: http://localhost:3999
+          # Task 3.3's done-condition edits a stored event behind ADP's back:
+          # there is no honest way to check tamper-evidence without tampering.
+          ADP_DATABASE_URL: postgres://adp:adp@localhost:5432/adp
         run: python -m pytest -m contract

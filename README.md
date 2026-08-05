@@ -34,6 +34,10 @@ Phase 0 in progress.
 - **1.4** — the recorder and its spool. A tool call never blocks on an ADP write, and a recorder
   killed mid-run resumes into a complete, gap-free chain — checked with a real `SIGKILL` against a
   live ADP, and confirmed by ADP's own `emitter_complete`.
+- **3.1, 3.2, 3.3** — exact McNemar, bootstrap intervals resampled over **tasks**, ICC and variance
+  decomposition; self-contained reports whose header carries state completeness and median context
+  fidelity; and evidence gating that downgrades an unverifiable verdict to `error`, checked by
+  actually tampering with a stored event.
 - **2.1, 2.2, 2.3** — replay: fork-at-zero, the fork-at-step diagnostic with an unsuppressible
   banner, and the runner's identity preflight. **No provider is called anywhere in the package** —
   the agent is an injected protocol, so running the real experiment is Phase 4 work needing keys
