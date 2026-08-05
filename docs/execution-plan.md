@@ -6,6 +6,23 @@ deliverable and its done-condition. Gates are hard stops.
 
 **Scope:** 2 engineers × 14–16 weeks.
 
+> **Build status, 2026-08-05.** Phases 0–3 are implemented and merged. Both gates pass against a live
+> ADP 0.1.0: **G0** median fidelity 0.951 on the worst in-scope cell (after Amendment 1, see
+> `docs/pre-registration.md`), **G1** 1.4% recording overhead against a 10% budget. The power
+> analysis fixes the corpus at **170 tasks × 3 repetitions**.
+>
+> Three things below are **not** done, each blocked on a dependency unavailable in the build
+> environment and each enforced as unfinished in code rather than merely noted:
+>
+> - **Task 1.3's corpus.** The auditor is complete; `tb2_closed_corpus.json` does not exist, because
+>   Terminal Bench is not installed. `build_corpus` refuses to write a corpus below the target.
+> - **Phase 4, and any real model call.** No provider is contacted anywhere in the package — the
+>   agent is an injected protocol. This needs keys and budget.
+> - **The Inspect binding in Task 1.4.** `inspect-ai` could not be installed; the wrapper is verified
+>   against a fake solver of the same shape and says so in its own docstring.
+>
+> Per-task status is in `README.md`; the reasoning behind each decision is in the merged PRs.
+
 ---
 
 ## 1. What this builds
