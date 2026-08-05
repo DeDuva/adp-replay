@@ -42,6 +42,9 @@ Phase 0 in progress.
   banner, and the runner's identity preflight. **No provider is called anywhere in the package** —
   the agent is an injected protocol, so running the real experiment is Phase 4 work needing keys
   and budget.
+- **1.5** — the [overhead benchmark](docs/g1-overhead-report.md). **Gate G1 passes**: 1.4% median
+  overhead against a 10% budget, inclusive of ADP round-trips, and under budget at every step
+  duration measured.
 - **1.3** — the [closure audit](docs/closure-audit.md). The auditor is done; **the corpus is not**.
   Terminal Bench is not available here, so `tb2_closed_corpus.json` has not been built and the
   done-condition is not met. `build_corpus` refuses to write a corpus that falls short of the
