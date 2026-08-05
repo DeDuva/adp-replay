@@ -42,6 +42,7 @@ from adp_replay.adp import (
     assert_api_version,
 )
 from adp_replay.recording import Recorder, Spool
+from adp_replay.replay import assert_separately_authorized
 from adp_replay.storage import (
     AttestationError,
     LocalCAStore,
@@ -425,6 +426,7 @@ RECORDER_CHILD = """
 import os, sys
 from adp_replay.adp import AdpClient
 from adp_replay.recording import Recorder, Spool
+from adp_replay.replay import assert_separately_authorized
 
 base, runner, scorer, owner, repo, session, spool_root = sys.argv[1:8]
 client = AdpClient(base, runner_token=runner, scorer_token=scorer)
@@ -523,3 +525,67 @@ def test_killing_the_recorder_leaves_a_resumable_gap_free_chain(
     session_state = next(s for s in verified["sessions"] if s["session_id"] == session)
     assert session_state["emitter_tracked"] is True
     assert session_state["emitter_complete"] is True
+
+
+# --- Task 2.3: the identity preflight -----------------------------------------
+
+
+def test_the_scorer_is_confirmed_independent_before_any_spend(
+    adp_base_url: str,
+    runner_token: str,
+    scorer_token: str,
+    repository: tuple[str, str],
+    intent_id: str,
+    tmp_path: Path,
+) -> None:
+    """Two principals, and ADP says so — the preflight passes and spend begins."""
+    owner, repo = repository
+    _, _, git_sha = _repo_with_a_commit(adp_base_url, runner_token, tmp_path)
+
+    with AdpClient(adp_base_url, runner_token=runner_token, scorer_token=scorer_token) as adp:
+        assert assert_separately_authorized(adp, owner, repo, intent_id=intent_id, git_sha=git_sha)
+
+
+def test_adp_calls_a_self_reported_score_what_it_is(
+    adp_base_url: str,
+    runner_token: str,
+    scorer_token: str,
+    client: AdpClient,
+    repository: tuple[str, str],
+    intent_id: str,
+    tmp_path: Path,
+) -> None:
+    """The fact the whole preflight rests on, checked against a live ADP.
+
+    A score reported by the identity that opened the run is not independent
+    evidence, and ADP says ``separately_authorized: false`` rather than leaving
+    a consumer to work it out. The preflight is only worth running because this
+    answer is real.
+
+    The dangerous configuration is not two identical tokens — the client refuses
+    those outright — but two *different* tokens belonging to one principal.
+    Nothing over REST can mint a second token, so what is verified here is the
+    underlying answer; the preflight's refusal on that answer is unit-tested.
+    """
+    owner, repo = repository
+    _, _, git_sha = _repo_with_a_commit(adp_base_url, runner_token, tmp_path)
+    run_id = client.create_run(owner, repo, intent_id=intent_id, orchestrator="adp-replay")["id"]
+
+    independent = client.report_eval(
+        owner, repo, run_id, name="by-scorer", passed=True, git_sha=git_sha, spec={"v": 1}
+    )
+    assert independent["separately_authorized"] is True
+
+    # Same call, reported with the runner's own identity.
+    self_reported = httpx.post(
+        f"{adp_base_url}/api/adp/repos/{owner}/{repo}/runs/{run_id}/evals",
+        headers={"Authorization": f"Bearer {runner_token}"},
+        json={"name": "by-runner", "passed": True, "git_sha": git_sha, "spec": {"v": 1}},
+        timeout=30.0,
+    )
+    self_reported.raise_for_status()
+    assert self_reported.json()["separately_authorized"] is False
+
+    # And the two agree on scorer identity: same spec, same spec_digest, so a
+    # comparison across them would be refused for the right reason or not at all.
+    assert self_reported.json()["spec_digest"] == independent["spec_digest"]

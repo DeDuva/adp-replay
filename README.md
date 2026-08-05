@@ -34,6 +34,10 @@ Phase 0 in progress.
 - **1.4** — the recorder and its spool. A tool call never blocks on an ADP write, and a recorder
   killed mid-run resumes into a complete, gap-free chain — checked with a real `SIGKILL` against a
   live ADP, and confirmed by ADP's own `emitter_complete`.
+- **2.1, 2.2, 2.3** — replay: fork-at-zero, the fork-at-step diagnostic with an unsuppressible
+  banner, and the runner's identity preflight. **No provider is called anywhere in the package** —
+  the agent is an injected protocol, so running the real experiment is Phase 4 work needing keys
+  and budget.
 - **1.3** — the [closure audit](docs/closure-audit.md). The auditor is done; **the corpus is not**.
   Terminal Bench is not available here, so `tb2_closed_corpus.json` has not been built and the
   done-condition is not met. `build_corpus` refuses to write a corpus that falls short of the
