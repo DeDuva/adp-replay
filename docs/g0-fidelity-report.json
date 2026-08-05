@@ -1,0 +1,242 @@
+{
+  "gate": "G0",
+  "passed": false,
+  "threshold": 0.85,
+  "grounding": "round_trip_only",
+  "providers": [
+    "anthropic",
+    "openai",
+    "google"
+  ],
+  "corpus_digest": "sha256:0ffe967ad3a1d429f2a572fab6a6654466d4f00af3b9084b97f2e746e2a831f8",
+  "cells": [
+    {
+      "source": "anthropic",
+      "target": "openai",
+      "capability": "fork_at_zero",
+      "median": 1.0,
+      "iqr": [
+        1.0,
+        1.0
+      ],
+      "tasks": 5,
+      "contexts": 5,
+      "passed": true,
+      "lost": {
+        "document_attachment": 1
+      },
+      "transformed": {},
+      "grounding": "round_trip_only"
+    },
+    {
+      "source": "anthropic",
+      "target": "openai",
+      "capability": "fork_at_step",
+      "median": 0.9511,
+      "iqr": [
+        0.8846,
+        0.9615
+      ],
+      "tasks": 5,
+      "contexts": 8,
+      "passed": true,
+      "lost": {
+        "reasoning_signature": 5,
+        "reasoning_trace": 5,
+        "citation_annotation": 1,
+        "document_attachment": 1
+      },
+      "transformed": {
+        "tool_result": 2,
+        "turn_structure": 1
+      },
+      "grounding": "round_trip_only"
+    },
+    {
+      "source": "anthropic",
+      "target": "google",
+      "capability": "fork_at_zero",
+      "median": 1.0,
+      "iqr": [
+        1.0,
+        1.0
+      ],
+      "tasks": 5,
+      "contexts": 5,
+      "passed": true,
+      "lost": {},
+      "transformed": {
+        "document_attachment": 1
+      },
+      "grounding": "round_trip_only"
+    },
+    {
+      "source": "anthropic",
+      "target": "google",
+      "capability": "fork_at_step",
+      "median": 0.8462,
+      "iqr": [
+        0.8261,
+        0.8696
+      ],
+      "tasks": 5,
+      "contexts": 8,
+      "passed": false,
+      "lost": {
+        "reasoning_signature": 5,
+        "reasoning_trace": 5,
+        "citation_annotation": 1
+      },
+      "transformed": {
+        "tool_call": 12,
+        "tool_result": 12,
+        "document_attachment": 1
+      },
+      "grounding": "round_trip_only"
+    },
+    {
+      "source": "openai",
+      "target": "anthropic",
+      "capability": "fork_at_zero",
+      "median": 1.0,
+      "iqr": [
+        1.0,
+        1.0
+      ],
+      "tasks": 5,
+      "contexts": 5,
+      "passed": true,
+      "lost": {},
+      "transformed": {},
+      "grounding": "round_trip_only"
+    },
+    {
+      "source": "openai",
+      "target": "anthropic",
+      "capability": "fork_at_step",
+      "median": 1.0,
+      "iqr": [
+        1.0,
+        1.0
+      ],
+      "tasks": 5,
+      "contexts": 8,
+      "passed": true,
+      "lost": {},
+      "transformed": {
+        "turn_structure": 1
+      },
+      "grounding": "round_trip_only"
+    },
+    {
+      "source": "openai",
+      "target": "google",
+      "capability": "fork_at_zero",
+      "median": 1.0,
+      "iqr": [
+        1.0,
+        1.0
+      ],
+      "tasks": 5,
+      "contexts": 5,
+      "passed": true,
+      "lost": {},
+      "transformed": {},
+      "grounding": "round_trip_only"
+    },
+    {
+      "source": "openai",
+      "target": "google",
+      "capability": "fork_at_step",
+      "median": 0.8696,
+      "iqr": [
+        0.8696,
+        0.8696
+      ],
+      "tasks": 5,
+      "contexts": 8,
+      "passed": true,
+      "lost": {},
+      "transformed": {
+        "tool_call": 12,
+        "tool_result": 12,
+        "turn_structure": 1
+      },
+      "grounding": "round_trip_only"
+    },
+    {
+      "source": "google",
+      "target": "anthropic",
+      "capability": "fork_at_zero",
+      "median": 1.0,
+      "iqr": [
+        1.0,
+        1.0
+      ],
+      "tasks": 5,
+      "contexts": 5,
+      "passed": true,
+      "lost": {},
+      "transformed": {
+        "document_attachment": 1
+      },
+      "grounding": "round_trip_only"
+    },
+    {
+      "source": "google",
+      "target": "anthropic",
+      "capability": "fork_at_step",
+      "median": 1.0,
+      "iqr": [
+        1.0,
+        1.0
+      ],
+      "tasks": 5,
+      "contexts": 8,
+      "passed": true,
+      "lost": {},
+      "transformed": {
+        "document_attachment": 1
+      },
+      "grounding": "round_trip_only"
+    },
+    {
+      "source": "google",
+      "target": "openai",
+      "capability": "fork_at_zero",
+      "median": 1.0,
+      "iqr": [
+        1.0,
+        1.0
+      ],
+      "tasks": 5,
+      "contexts": 5,
+      "passed": true,
+      "lost": {
+        "document_attachment": 1
+      },
+      "transformed": {},
+      "grounding": "round_trip_only"
+    },
+    {
+      "source": "google",
+      "target": "openai",
+      "capability": "fork_at_step",
+      "median": 1.0,
+      "iqr": [
+        1.0,
+        1.0
+      ],
+      "tasks": 5,
+      "contexts": 8,
+      "passed": true,
+      "lost": {
+        "document_attachment": 1
+      },
+      "transformed": {
+        "turn_structure": 1
+      },
+      "grounding": "round_trip_only"
+    }
+  ]
+}
