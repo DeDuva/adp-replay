@@ -14,6 +14,10 @@ Two capabilities, and the distinction between them is load-bearing:
 The full task-by-task build plan is [`docs/execution-plan.md`](docs/execution-plan.md). It is the
 plan of record; this README is orientation only.
 
+Why this exists at all — the problem it solves, why it is built on ADP, and why it has to be neutral
+to be worth anything — is [`docs/html/`](docs/html/), published at
+[deduva.github.io/adp-replay](https://deduva.github.io/adp-replay/).
+
 ## Status
 
 Phase 0 in progress.
