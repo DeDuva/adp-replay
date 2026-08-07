@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Why adp-replay exists — everyone has a number, nobody can check one</title>
+<meta name="description" content="Every claim that one model codes better than another is reported by the party that benefits, computed by a scorer it controls, on a corpus it chose, through a harness it wrote. adp-replay records agent trajectories and replays them under a substituted model with the harness pinned — and refuses to report a comparison it cannot back with evidence somebody else signed.">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0d0e10;--panel:#16181b;--panel2:#1d2024;--panel3:#131518;--line:#2a2e33;--fg:#e9e7e2;--sub:#b9bcc1;--dim:#8b9098;--cyan:#4fd1d9;--amber:#e0a458;--red:#e4695e;--green:#57d9a3;--violet:#a78bfa;--mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',system-ui,sans-serif}
+html,body{margin:0;padding:0;background:var(--bg);}
+body{-webkit-font-smoothing:antialiased;}
+*{box-sizing:border-box;}
+a{color:var(--cyan);text-decoration:none;border-bottom:1px solid rgba(79,209,217,.35);}
+a:hover{color:#7fe3e9;border-bottom-color:#7fe3e9;}
+input[type=range]{-webkit-appearance:none;appearance:none;height:4px;background:var(--line);border-radius:2px;outline:none;}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--fg);cursor:pointer;}
+.wrap{max-width:1120px;margin:0 auto;padding:110px 40px 0}
+.kick{font:500 12px/1 var(--mono);letter-spacing:.18em;margin-bottom:20px}
+.t{font:600 40px/1.15 var(--sans);letter-spacing:-.015em;margin:0 0 24px;color:var(--fg)}
+.b{color:var(--sub);margin:0 0 18px;max-width:68ch;text-wrap:pretty;font:400 17px/1.65 var(--sans)}
+.fig{border:1px solid var(--line);background:var(--panel);border-radius:4px;overflow:hidden;margin-top:44px}
+.fighead{display:flex;justify-content:space-between;align-items:center;gap:24px;padding:14px 20px;border-bottom:1px solid var(--line);background:var(--panel2);flex-wrap:wrap}
+.figlab{font:500 12px var(--mono);letter-spacing:.12em;color:var(--dim)}
+.figcap{padding:16px 20px;border-top:1px solid var(--line);background:var(--panel3);font:400 14px/1.5 var(--mono);color:var(--dim)}
+.btn{font:500 12px var(--mono);letter-spacing:.08em;color:#0d0e10;background:var(--cyan);border:none;border-radius:3px;padding:7px 14px;cursor:pointer}
+.btn2{font:500 12px var(--mono);letter-spacing:.08em;color:var(--dim);background:transparent;border:1px solid var(--line);border-radius:3px;padding:7px 14px;cursor:pointer}
+.btn2:hover{color:var(--fg);border-color:#3f454c}
+.ctrl{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.counter{font:400 12px var(--mono);color:var(--dim);width:46px}
+.mono{font-family:var(--mono)}
+.stat{background:var(--panel2);padding:18px}
+.statk{font:400 11px var(--mono);letter-spacing:.1em;color:var(--dim);margin-bottom:8px}
+.statv{font:500 26px var(--mono);color:var(--fg)}
+.chip{border:1px solid var(--line);background:var(--panel);border-radius:4px;padding:18px 20px;flex:1;min-width:210px}
+.chipv{font:500 30px var(--mono);letter-spacing:-.02em;margin-bottom:8px}
+.chipk{font:400 13px/1.5 var(--sans);color:var(--dim)}
+.acc{border:1px solid var(--line);background:var(--panel);border-radius:4px;margin-top:14px;overflow:hidden}
+.accbtn{width:100%;display:flex;align-items:baseline;gap:16px;padding:20px 22px;background:transparent;border:none;cursor:pointer;text-align:left}
+.accbtn:hover{background:#191c1f}
+.accarrow{font:400 14px var(--mono);color:var(--cyan);width:14px;flex-shrink:0}
+.acct{font:500 18px var(--sans);color:var(--fg);letter-spacing:-.01em}
+.accs{font:400 13px var(--mono);color:var(--dim);margin-left:auto;text-align:right;max-width:40ch}
+.accbody{padding:0 22px 24px}
+.conline{font:400 13px/1.7 var(--mono)}
+.hz{display:grid;grid-template-columns:180px repeat(4,1fr);gap:1px;background:var(--line);min-width:720px}
+.hzh{background:var(--panel2);padding:12px 10px;font:500 10px var(--mono);letter-spacing:.08em;color:var(--dim);text-align:center}
+.hzn{background:var(--panel);padding:14px 12px;font:500 14px var(--sans);color:var(--fg)}
+.hzc{background:var(--panel);padding:14px 10px;font:500 12px var(--mono);letter-spacing:.06em;text-align:center}
+.block{color:var(--red)}.adv{color:var(--amber)}
+.argcard{border:1px solid var(--line);background:var(--panel);border-radius:4px;padding:26px 24px}
+.argk{font:500 12px var(--mono);letter-spacing:.12em;color:var(--cyan);margin-bottom:14px}
+.argb{font:400 15px/1.65 var(--sans);color:var(--sub);margin:0}
+.ref{border-bottom:none;font:500 11px var(--mono);color:var(--dim);vertical-align:super;margin-left:1px}
+.ref:hover{color:var(--cyan);border-bottom:none}
+.refs{margin:18px 0 0;padding-left:22px;font:400 13px/1.8 var(--mono);color:var(--dim)}
+.refs li{margin-bottom:6px}
+.quad{background:var(--panel);padding:24px 20px}
+.quadk{font:500 11px var(--mono);letter-spacing:.12em;color:var(--cyan);margin-bottom:12px}
+.quadb{font-size:15px;line-height:1.55;color:var(--sub)}
+.hero-stage{position:relative;height:330px;border:1px solid var(--line);border-radius:4px;background:linear-gradient(180deg,#101215 0%,#0e1013 100%);overflow:hidden;margin-top:60px}
+.hlab{position:absolute;font:500 11px var(--mono);letter-spacing:.12em;color:var(--dim)}
+.dot{position:absolute;width:9px;height:9px;border-radius:50%;left:-2%;top:var(--y0);background:var(--c);opacity:0;animation:pair var(--t,7.5s) linear infinite;animation-delay:var(--d)}
+.dot.err{animation-name:pairErr}
+@keyframes pair{
+0%{left:-2%;top:var(--y0);opacity:0;border-radius:50%;background:var(--c);box-shadow:none}
+6%{opacity:.95}
+50%{left:54%;top:var(--y1);background:var(--c);border-radius:50%}
+57%{left:61.5%;top:47%;background:#57d9a3;border-radius:2px;box-shadow:0 0 10px rgba(87,217,163,.6)}
+93%{opacity:.95}
+100%{left:102%;top:47%;background:#57d9a3;border-radius:2px;opacity:0}
+}
+@keyframes pairErr{
+0%{left:-2%;top:var(--y0);opacity:0;border-radius:50%;background:var(--c)}
+6%{opacity:.9}
+50%{left:54%;top:var(--y1);background:var(--c)}
+56%{left:59.5%;top:47%;background:var(--c)}
+68%{left:60%;top:81%;background:#e4695e;border-radius:2px;opacity:.8}
+88%{left:60%;top:81%;opacity:.35}
+100%{left:60%;top:81%;opacity:0}
+}
+.gate{position:absolute;left:60.8%;top:28%;height:40%;width:3px;background:var(--cyan);border-radius:2px;animation:gpulse 2.4s ease-in-out infinite}
+@keyframes gpulse{0%,100%{box-shadow:0 0 6px rgba(79,209,217,.35)}50%{box-shadow:0 0 20px rgba(79,209,217,.9)}}
+.trunk{position:absolute;left:61.2%;right:0;top:calc(47% + 3px);height:2px;background:#2f353b}
+.errbin{position:absolute;left:54%;right:0;bottom:0;height:15%;border-top:1px dashed #3a2b2b;background:rgba(228,105,94,.05)}
+.tape{position:absolute;left:0;right:0;height:1px;background:#1e2226}
+@media (prefers-reduced-motion:reduce){.dot{animation:none;opacity:0}.gate{animation:none}}
+@media (max-width:760px){.hero-stage{height:260px}.accs{display:none}}
+</style>
+</helmet>
+<div style="background:var(--bg);color:var(--fg);font:400 17px/1.65 var(--sans);min-height:100vh;padding-bottom:140px">
+
+<!-- ══════════════════════ HERO ══════════════════════ -->
+<header class="wrap" style="padding-top:100px">
+<div class="kick" style="color:var(--cyan)">ADP-REPLAY · EVIDENCE-GATED MODEL COMPARISON</div>
+<h1 style="font:600 64px/1.05 var(--sans);letter-spacing:-.02em;margin:0 0 28px;max-width:18ch">Everyone has a number.<br>Nobody can check one.</h1>
+<p style="font-size:21px;line-height:1.55;color:var(--sub);margin:0;max-width:64ch;text-wrap:pretty">Every claim that one model writes better code than another is produced by the party that benefits from it, scored by a grader it controls, on a corpus it selected, through a harness it wrote — and published as a number, not as an artifact anyone can re-derive. When the gap is five points, <em style="font-style:normal;color:var(--amber)">five things moved at once</em> and no mechanism exists to say which one moved the result.</p>
+<p style="font-size:21px;line-height:1.55;color:var(--sub);margin:18px 0 0;max-width:64ch;text-wrap:pretty"><span class="mono" style="font-size:19px;color:var(--fg)">adp-replay</span> records agent trajectories on closed-world coding tasks and replays them under a substituted model with the harness pinned, on evidence it does not grade itself — hash-chained into <a href="https://deduva.github.io/adp/">ADP</a>, signed there, and verified through an endpoint that answers to somebody else. Its most load-bearing feature is the set of comparisons it <em style="font-style:normal;color:var(--cyan)">refuses to make</em>.</p>
+
+<div class="hero-stage">
+<span class="hlab" style="left:24px;top:20px;color:var(--amber)">ARM A — RECORDED TRAJECTORY, MODEL A</span>
+<span class="hlab" style="left:24px;bottom:60px;color:var(--cyan)">ARM B — SAME TASK, SAME STATE, SUBSTITUTED MODEL</span>
+<span class="hlab" style="left:50.5%;top:20px;color:var(--cyan)">VERIFY</span>
+<span class="hlab" style="right:24px;top:calc(47% - 26px);color:var(--green)">PAIRED VERDICT — EVIDENCE HELD</span>
+<span class="hlab" style="right:24px;bottom:14px;color:var(--red)">UNVERIFIABLE → ERROR · NEVER A PASS, NEVER A FAIL</span>
+<div class="tape" style="top:47%"></div>
+<div class="gate"></div>
+<div class="trunk"></div>
+<div class="errbin"></div>
+<div class="dot" style="--y0:16%;--y1:38%;--c:#e0a458;--d:0s"></div>
+<div class="dot" style="--y0:25%;--y1:41%;--c:#e0a458;--d:1.2s"></div>
+<div class="dot err" style="--y0:20%;--y1:39%;--c:#e0a458;--d:2.4s"></div>
+<div class="dot" style="--y0:30%;--y1:43%;--c:#e0a458;--d:3.6s"></div>
+<div class="dot" style="--y0:14%;--y1:37%;--c:#e0a458;--d:4.8s"></div>
+<div class="dot" style="--y0:27%;--y1:42%;--c:#e0a458;--d:6s"></div>
+<div class="dot" style="--y0:70%;--y1:55%;--c:#4fd1d9;--d:.3s"></div>
+<div class="dot" style="--y0:76%;--y1:56%;--c:#4fd1d9;--d:1.5s"></div>
+<div class="dot" style="--y0:72%;--y1:55%;--c:#4fd1d9;--d:2.7s"></div>
+<div class="dot err" style="--y0:78%;--y1:57%;--c:#4fd1d9;--d:3.9s"></div>
+<div class="dot" style="--y0:74%;--y1:56%;--c:#4fd1d9;--d:5.1s"></div>
+<div class="dot" style="--y0:69%;--y1:54%;--c:#4fd1d9;--d:6.3s"></div>
+</div>
+
+<div style="display:flex;gap:14px;margin-top:28px;flex-wrap:wrap">
+<div class="chip"><div class="chipv" style="color:var(--fg)">170 × 3</div><div class="chipk">tasks × repetitions — the corpus size was fixed by a power analysis <em style="font-style:normal;color:var(--fg)">before</em> any data existed<a class="ref" href="#ref-2">2</a></div></div>
+<div class="chip"><div class="chipv" style="color:var(--cyan)">0.85 → 0.951</div><div class="chipk">pre-registered context-fidelity floor, and the worst cell measured against it. Gate G0<a class="ref" href="#ref-3">3</a></div></div>
+<div class="chip"><div class="chipv" style="color:var(--green)">1.4%</div><div class="chipk">recording overhead against a 10% budget, inclusive of ADP round-trips. Gate G1<a class="ref" href="#ref-4">4</a></div></div>
+<div class="chip"><div class="chipv" style="color:var(--red)">error</div><div class="chipk">the verdict when a run's evidence does not verify — never counted as a pass or a fail<a class="ref" href="#ref-5">5</a></div></div>
+</div>
+
+<div style="display:flex;flex-wrap:wrap;gap:28px;margin-top:44px;padding-top:24px;border-top:1px solid var(--line);font:400 13px var(--mono);color:var(--dim)">
+<span>Created by Dov Zimring, with lots of help from Claude</span>
+<a href="https://github.com/DeDuva/adp-replay">github.com/DeDuva/adp-replay</a>
+<a href="https://deduva.github.io/adp/">why ADP exists</a>
+<a href="https://github.com/DeDuva/adp-replay/blob/main/LICENSE">Apache-2.0 licensed</a>
+</div>
+</header>
+
+<!-- ══════════════════════ 01 WHY ══════════════════════ -->
+<section class="wrap">
+<div class="kick" style="color:var(--cyan)">01 · WHY</div>
+<h2 class="t" style="max-width:26ch">A leaderboard is not a measurement</h2>
+<p class="b">Agentic coding evaluation has a shape that would not survive in any other field that uses the word <em style="font-style:normal;color:var(--fg)">evidence</em>. A model is run against a task suite by a scaffold its own vendor wrote, graded by a checker that vendor configured, on tasks that vendor picked, and the result is published as a percentage with no artifact behind it. Nothing is hidden, exactly — there is simply nothing to hand over. The run left no record that anyone else could re-derive the number from.</p>
+<p class="b">That would still be tolerable if the model were the only thing that varied. It never is. An agentic result is the joint product of five factors, and a comparison is only attributable to the model when the other four are held identical. Toggle them below.</p>
+
+<figure class="fig" style="margin-top:36px">
+<div class="fighead">
+<span class="figlab">FIG 01 · WHAT ACTUALLY VARIED</span>
+<div class="ctrl">
+<button class="btn" onClick="{{ cfPin }}">PIN EVERYTHING BUT THE MODEL</button>
+<button class="btn2" onClick="{{ cfReset }}">RESET TO A LEADERBOARD</button>
+</div>
+</div>
+<div style="padding:34px 28px;display:flex;flex-direction:column;gap:26px">
+<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:3px">
+<sc-for list="{{ cfCells }}" as="f" hint-placeholder-count="5">
+<div onClick="{{ f.tog }}" style="background:var(--panel2);padding:18px 14px;cursor:{{ f.cursor }}">
+<div style="font:400 11px var(--mono);letter-spacing:.1em;color:var(--dim);margin-bottom:10px">{{ f.name }}</div>
+<div style="font:500 15px var(--mono);color:{{ f.color }};margin-bottom:8px">{{ f.state }}</div>
+<div style="font:400 12px/1.5 var(--sans);color:var(--dim)">{{ f.note }}</div>
+</div>
+</sc-for>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:3px">
+<div class="stat"><div class="statk">FACTORS THAT MOVED</div><div class="statv" style="color:{{ cfCountColor }}">{{ cfCount }}</div></div>
+<div class="stat"><div class="statk">THE DIFFERENCE IS ATTRIBUTABLE TO</div><div class="statv" style="font-size:18px;line-height:1.4;color:{{ cfVerdictColor }}">{{ cfVerdict }}</div></div>
+</div>
+</div>
+<figcaption class="figcap">{{ cfCaption }}</figcaption>
+</figure>
+
+<p class="b" style="margin-top:36px">Two further problems sit underneath the first, and neither is solved by publishing more numbers. <strong style="color:var(--fg);font-weight:500">Reproducibility:</strong> a coding task that reaches the network, waits on a background process, or reads the clock produces a different run six weeks later for reasons that have nothing to do with the model — so a corpus that was never audited for closure cannot support a claim about anything. <strong style="color:var(--fg);font-weight:500">Statistical honesty:</strong> agent runs are stochastic, so the same model on the same task passes sometimes and fails sometimes; with repetitions in play, the unit of independent evidence is the task, and treating trajectories as independent samples manufactures confidence out of correlation. These are not exotic failure modes. They are the default.</p>
+</section>
+
+<!-- ══════════════════════ 02 THE CLEAN COMPARISON ══════════════════════ -->
+<section class="wrap">
+<div class="kick" style="color:var(--amber)">02 · THE CLEAN COMPARISON</div>
+<h2 class="t" style="max-width:30ch">Fork at zero — and the fork that is not a comparison</h2>
+<p class="b">There is exactly one way to hold the other four factors identical: don't re-run the experiment, <em style="font-style:normal;color:var(--fg)">replay it</em>. Record what an agent actually did on a task — every model call, tool execution, and filesystem delta — then materialize the same base state, reconstruct the same initial context, pin the same harness and the same scorer, and substitute only the model. That is <strong style="color:var(--cyan);font-weight:500">fork-at-zero</strong>, and it is a model comparison and may be described as one.</p>
+<p class="b">Recording also makes a second, tempting thing possible: resume a recorded trajectory from step <em style="font-style:normal;color:var(--fg)">k</em> under a different model and see whether it finishes. That is <strong style="color:var(--amber);font-weight:500">fork-at-step</strong>, and it is not a model comparison. It measures how well model B continues model A's policy prefix — a genuinely useful diagnostic, and a completely different question. Almost every intuitive way of reading it out loud turns it back into a comparison, which is why this repository does not rely on discipline to keep the two apart. It attaches a banner that no configuration can remove. Try it.</p>
+
+<figure class="fig">
+<div class="fighead">
+<span class="figlab">FIG 02 · TWO FORKS, ONE OF WHICH IS A DIAGNOSTIC</span>
+<div class="ctrl">
+<button onClick="{{ fkZero }}" style="font:500 12px var(--mono);letter-spacing:.08em;border:1px solid var(--line);border-radius:3px;padding:7px 14px;cursor:pointer;background:{{ fkZeroBg }};color:{{ fkZeroFg }}">fork-at-zero</button>
+<button onClick="{{ fkStep }}" style="font:500 12px var(--mono);letter-spacing:.08em;border:1px solid var(--line);border-radius:3px;padding:7px 14px;cursor:pointer;background:{{ fkStepBg }};color:{{ fkStepFg }}">fork-at-step k=5</button>
+</div>
+</div>
+<div style="padding:34px 28px;display:flex;flex-direction:column;gap:24px">
+<div>
+<div style="font:500 11px var(--mono);letter-spacing:.12em;color:var(--dim);margin-bottom:14px">RECORDED TRAJECTORY — MODEL A</div>
+<div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap">
+<sc-for list="{{ fkA }}" as="s" hint-placeholder-count="12">
+<div style="width:30px;height:26px;border-radius:2px;background:{{ s.bg }};border:1px solid {{ s.bd }};box-shadow:{{ s.mark }};font:400 10px/26px var(--mono);color:var(--dim);text-align:center;transition:background .35s ease,box-shadow .35s ease">{{ s.label }}</div>
+</sc-for>
+</div>
+</div>
+<div>
+<div style="font:500 11px var(--mono);letter-spacing:.12em;color:var(--dim);margin-bottom:14px">{{ fkBLabel }}</div>
+<div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap">
+<sc-for list="{{ fkB }}" as="s" hint-placeholder-count="12">
+<div style="width:30px;height:26px;border-radius:2px;background:{{ s.bg }};border:1px solid {{ s.bd }};box-shadow:{{ s.mark }};font:400 10px/26px var(--mono);color:var(--dim);text-align:center;transition:background .35s ease,box-shadow .35s ease">{{ s.label }}</div>
+</sc-for>
+</div>
+<div style="font:400 12px var(--mono);color:{{ fkForkColor }};margin-top:10px">{{ fkForkNote }}</div>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:3px">
+<div class="stat"><div class="statk">WHAT VARIES BETWEEN THE ARMS</div><div class="statv" style="font-size:16px;line-height:1.5;color:{{ fkVaryColor }}">{{ fkVary }}</div></div>
+<div class="stat"><div class="statk">WHAT THIS MEASURES</div><div class="statv" style="font-size:16px;line-height:1.5;color:var(--sub)">{{ fkMeasures }}</div></div>
+</div>
+<sc-if value="{{ fkBanner }}" hint-placeholder-val="{{ false }}">
+<div style="border:1px solid rgba(224,164,88,.5);background:rgba(224,164,88,.07);border-radius:3px;padding:16px 18px">
+<div style="font:400 14px/1.7 var(--mono);color:var(--amber)">Continuation diagnostic: measures Model B's ability to continue Model A's trajectory prefix. Not a pinned-harness model comparison.</div>
+<div style="display:flex;align-items:center;gap:14px;margin-top:14px;flex-wrap:wrap">
+<button class="btn2" onClick="{{ fkSuppress }}">SUPPRESS BANNER</button>
+<span style="font:400 13px var(--mono);color:{{ fkSuppressColor }}">{{ fkSuppressMsg }}</span>
+</div>
+</div>
+</sc-if>
+</div>
+<figcaption class="figcap">{{ fkCaption }}</figcaption>
+</figure>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:4px;margin-top:14px">
+<div style="background:var(--panel);padding:22px 20px"><div style="font:500 11px var(--mono);letter-spacing:.12em;color:var(--cyan);margin-bottom:10px">WHAT REPLAY BUYS</div><div style="font-size:15px;line-height:1.6;color:var(--sub)">The paired design. Both arms answer the same task from the same bytes, so the comparison is per-task and paired — which is what makes an exact McNemar test the right instrument and a small corpus sufficient. Re-running two models against a suite independently throws that pairing away.</div></div>
+<div style="background:var(--panel);padding:22px 20px"><div style="font:500 11px var(--mono);letter-spacing:.12em;color:var(--amber);margin-bottom:10px">WHAT REPLAY DOES NOT BUY</div><div style="font-size:15px;line-height:1.6;color:var(--sub)">A recorded filesystem is not a recorded world. v0 captures the filesystem and nothing else — no processes, no sockets, no kernel state — and <span class="mono" style="font-size:13px;color:var(--fg)">state_completeness</span> is a required field on every manifest, reprinted in the header of every report, precisely so this limit cannot be lost between the run and the write-up.</div></div>
+</div>
+</section>
+
+<!-- ══════════════════════ 03 DEFENSIBILITY ══════════════════════ -->
+<section class="wrap">
+<div class="kick" style="color:var(--cyan)">03 · DEFENSIBILITY</div>
+<h2 class="t" style="max-width:30ch">Commitments made before the data</h2>
+<p class="b">Replay makes the comparison clean. It does not, by itself, make the answer defensible — a clean comparison run enough times, sliced enough ways, with the bar set afterwards, produces exactly the result you were hoping for. Everything below was therefore fixed before the measurement it governs existed, and each is enforced by code that fails rather than by a paragraph asking people to be careful. Expand any of them.</p>
+
+<div class="acc">
+<button class="accbtn" onClick="{{ d1Tog }}"><span class="accarrow">{{ d1Arrow }}</span><span class="acct">The corpus size was set by a power analysis, not by a budget</span><span class="accs">170 × 3 · power 0.806 · sensitivity published</span></button>
+<sc-if value="{{ d1Open }}" hint-placeholder-val="{{ false }}">
+<div class="accbody">
+<p class="b">The number of tasks is the single easiest place to launder a result: too few and the study cannot detect the effect it claims to have found; chosen after the fact and it is not a study at all. So the corpus size comes out of a simulation, before Task 1.3 goes looking for tasks — <strong style="color:var(--fg);font-weight:500">170 tasks × 3 repetitions</strong>, power 0.806, which is 1,020 recorded trajectories across both arms. Cheaper designs reached the same power for fewer trajectories and were still rejected: 310 tasks at one repetition each hits 0.812 for 620 trajectories, but within-task variance is not defined at a single repetition, and the analysis has already committed to reporting it. A design cannot be recommended on cost when it cannot support the analysis it exists to feed.</p>
+<p class="b">A design that only holds at one assumed effect size is a number, not a result — so the sensitivity curve is published with it. Drag it.</p>
+<figure class="fig" style="margin-top:24px">
+<div class="fighead">
+<span class="figlab">POWER VS. TRUE EFFECT SIZE</span>
+<label style="display:flex;align-items:center;gap:10px;font:400 12px var(--mono);color:var(--dim)">true effect <input type="range" min="0" max="4" step="1" value="{{ pwIdx }}" onChange="{{ pwSet }}" style="width:160px"> <span style="color:var(--fg);width:64px">{{ pwEffect }}</span></label>
+</div>
+<div style="padding:30px 24px;display:flex;flex-direction:column;gap:24px">
+<div>
+<div style="display:flex;justify-content:space-between;font:400 13px var(--mono);color:var(--sub);margin-bottom:10px"><span style="color:{{ pwColor }}">power at 170 × 3</span><span style="color:{{ pwColor }}">{{ pwValue }}</span></div>
+<div style="height:22px;background:var(--panel2);border:1px solid var(--line);border-radius:3px;overflow:hidden;position:relative"><div style="height:100%;background:{{ pwFill }};width:{{ pwW }};transition:width .3s ease,background .3s ease"></div><div style="position:absolute;left:80%;top:0;bottom:0;width:2px;background:var(--fg);opacity:.7"></div></div>
+<div style="font:400 12px var(--mono);color:var(--dim);margin-top:8px">the marker sits at the 0.8 target</div>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:3px">
+<div class="stat"><div class="statk">TRAJECTORIES RECORDED</div><div class="statv">1,020</div></div>
+<div class="stat"><div class="statk">TASKS AUDITED FOR CLOSURE</div><div class="statv">213</div></div>
+<div class="stat"><div class="statk">VERDICT AT THIS EFFECT</div><div class="statv" style="font-size:18px;color:{{ pwColor }}">{{ pwVerdict }}</div></div>
+</div>
+</div>
+<figcaption class="figcap">{{ pwCaption }}</figcaption>
+</figure>
+<p class="b" style="margin-top:24px">Two things this figure is honest about. Every input to it — base success rate 0.45, between-task SD 1.5 on the logit scale, alpha 0.05 — is a guess until pilot data replaces it, and the published analysis says so in those words. And power <em style="font-style:normal;color:var(--fg)">rises</em> with between-task spread rather than falling, which reads backwards until you notice that a wider spread of task difficulty needs a larger shift on the log-odds scale to move the marginal rate by the same ten points, and a larger shift produces more discordant pairs — the only pairs McNemar reads. The design is not at risk from a corpus more heterogeneous than assumed. It is at risk from a smaller true effect, which is what the slider shows.</p>
+</div>
+</sc-if>
+</div>
+
+<div class="acc">
+<button class="accbtn" onClick="{{ d2Tog }}"><span class="accarrow">{{ d2Arrow }}</span><span class="acct">The fidelity metric and its pass mark were registered before the scoring code</span><span class="accs">Gate G0 · every amendment shows its pre-amendment numbers</span></button>
+<sc-if value="{{ d2Open }}" hint-placeholder-val="{{ false }}">
+<div class="accbody">
+<p class="b">A trajectory recorded against one provider's wire format has to be translated to replay against another. Whatever the translation drops, the substituted model never sees — and if enough is dropped, the observed difference is evidence about the translator rather than about the models. That does not make the result weak; it makes it uninterpretable, which is why <strong style="color:var(--fg);font-weight:500">G0 is a hard stop</strong>: median context fidelity ≥ 0.85 per provider pair, or replayer work stops.</p>
+<p class="b">The metric, its element vocabulary, its weights, and the 0.85 bar were all committed to the repository before any code that scores against them existed — with a machine-readable transcription that a test compares against the published prose, so the probe cannot quietly score against different numbers than the ones on the page. Three design choices carry most of the weight. Scoring runs <em style="font-style:normal;color:var(--fg)">per element type, then across types</em>, because message text outnumbers everything else by two orders of magnitude and an instance-weighted score would read near 1.0 while every tool definition was being dropped. A transformed element scores exactly 0.5, fixed in advance, because there was no evidence available before measurement about whether content or frame matters more, and a neutral split is the only one that cannot later be argued into place. And classification follows the consequence, not the mechanism: if losing a weight-1 reasoning signature forces its weight-2 reasoning trace to be dropped, the trace scores as lost.</p>
+<p class="b">The first reading <em style="font-style:normal;color:var(--fg)">failed</em> — one cell of twelve at 0.846 against a 0.85 bar. Amendment 1 corrected the rule responsible, and because an amended metric that only ever showed its post-amendment numbers would be unfalsifiable, every G0 report prints both columns side by side, forever. The gate now passes at 0.951 on the worst in-scope cell. It is also labelled honestly: the reading is <span class="mono" style="font-size:15px;color:var(--fg)">round_trip_only</span> — it says what this repository's translators preserve, not what the target providers accept, and the registered grounding check has not run.</p>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:3px;margin-top:20px">
+<div class="stat"><div class="statk">PRE-REGISTERED BAR</div><div class="statv">0.85</div></div>
+<div class="stat"><div class="statk">FIRST READING, WORST CELL</div><div class="statv" style="color:var(--red)">0.846</div></div>
+<div class="stat"><div class="statk">AFTER AMENDMENT 1</div><div class="statv" style="color:var(--cyan)">0.951</div></div>
+</div>
+</div>
+</sc-if>
+</div>
+
+<div class="acc">
+<button class="accbtn" onClick="{{ d3Tog }}"><span class="accarrow">{{ d3Arrow }}</span><span class="acct">A task that is not closed cannot carry a claim</span><span class="accs">network · background process · clock — and when each one fires</span></button>
+<sc-if value="{{ d3Open }}" hint-placeholder-val="{{ false }}">
+<div class="accbody">
+<p class="b">A task is <strong style="color:var(--fg);font-weight:500">closed</strong> when running it twice, on two machines, at two different times, can differ only because the model differed. Three things break that, and the audit flags all three. What makes the audit useful rather than a machine for rejecting everything is that it cares <em style="font-style:normal;color:var(--fg)">when</em> a hazard fires.</p>
+<p class="b">Network at build time is fine: the environment is pinned by image digest, so whatever the build fetched is already inside the artifact every replay starts from. Network at run time is not, because it puts a third party's availability inside the measurement and a replay six weeks later gets a different internet. A clock read in a solution is fine — it produces a different trajectory, which is a thing the experiment measures. A clock read in a test is blocking, because it produces a different <em style="font-style:normal;color:var(--fg)">verdict for the same trajectory</em>, which is the thing that makes a result uninterpretable.</p>
+<div style="margin-top:24px;border:1px solid var(--line);border-radius:4px;overflow-x:auto">
+<div class="hz">
+<div class="hzh" style="text-align:left;padding-left:14px">HAZARD</div>
+<div class="hzh">AT BUILD TIME</div>
+<div class="hzh">IN THE SOLUTION</div>
+<div class="hzh">IN THE TEST</div>
+<div class="hzh">OTHER RUN-TIME</div>
+<div class="hzn">network</div><div class="hzc adv">advisory</div><div class="hzc block">blocking</div><div class="hzc block">blocking</div><div class="hzc block">blocking</div>
+<div class="hzn">background process</div><div class="hzc adv">advisory</div><div class="hzc block">blocking</div><div class="hzc block">blocking</div><div class="hzc block">blocking</div>
+<div class="hzn">clock</div><div class="hzc adv">advisory</div><div class="hzc adv">advisory</div><div class="hzc block">blocking</div><div class="hzc adv">advisory</div>
+</div>
+</div>
+<p class="b" style="margin-top:24px">Two restraints keep the audit from becoming noise, because an audit that over-matches gets ignored and an ignored audit is worse than none — it makes the corpus look examined. Commented-out lines are skipped, since flagging a commented-out <span class="mono" style="font-size:15px;color:var(--fg)">curl</span> trains people to ignore the tool. Loopback URLs are not network use, since a task talking to something it started inside its own container is closed. Every finding carries the file, the line, the matched text, the pattern that matched it, and why it matters — enough to check by hand and to disagree with.</p>
+<p class="b">A flagged task is not a broken task. It is a task <em style="font-style:normal;color:var(--fg)">this experiment</em> cannot interpret, which is why the corpus file records the rejected tasks alongside the accepted ones, with their findings: a corpus that listed only what survived would hide its own selection, and the interesting question about a closed corpus is always what had to be thrown away.</p>
+</div>
+</sc-if>
+</div>
+
+<div class="acc">
+<button class="accbtn" onClick="{{ d4Tog }}"><span class="accarrow">{{ d4Arrow }}</span><span class="acct">Confidence intervals resample tasks, never trajectories</span><span class="accs">the cheapest way to manufacture significance, foreclosed in advance</span></button>
+<sc-if value="{{ d4Open }}" hint-placeholder-val="{{ false }}">
+<div class="accbody">
+<p class="b">With 170 tasks at 3 repetitions there are 510 trajectories per arm, and a bootstrap that resamples those 510 will produce a tighter interval and a smaller p-value than one that resamples the 170 tasks. It is also wrong. Three repetitions of one task are three looks at the same question, not three independent samples; treating them as independent asserts information the experiment never collected. In the limiting case where repetitions within a task agree perfectly, the interval narrows by a factor of about √3 — the same data, made to look 1.7× more certain, with no new evidence anywhere.</p>
+<p class="b">So the resampling unit is fixed to tasks, appears in the report JSON as a field, and is on the never-cut list in the execution plan. Click the toggle to see the shape of the claim each choice is making.</p>
+<figure class="fig" style="margin-top:24px">
+<div class="fighead">
+<span class="figlab">WHAT COUNTS AS ONE SAMPLE</span>
+<div style="display:flex;gap:8px">
+<button onClick="{{ rsTask }}" style="font:500 12px var(--mono);letter-spacing:.08em;border:1px solid var(--line);border-radius:3px;padding:7px 14px;cursor:pointer;background:{{ rsTaskBg }};color:{{ rsTaskFg }}">resample tasks</button>
+<button onClick="{{ rsTraj }}" style="font:500 12px var(--mono);letter-spacing:.08em;border:1px solid var(--line);border-radius:3px;padding:7px 14px;cursor:pointer;background:{{ rsTrajBg }};color:{{ rsTrajFg }}">resample trajectories</button>
+</div>
+</div>
+<div style="padding:30px 24px;display:flex;flex-direction:column;gap:22px">
+<div style="display:flex;flex-wrap:wrap;gap:{{ rsGap }};transition:gap .4s ease">
+<sc-for list="{{ rsGroups }}" as="g" hint-placeholder-count="20">
+<div style="display:flex;gap:3px;padding:{{ g.pad }};border:1px solid {{ g.bd }};border-radius:3px;transition:border-color .4s ease">
+<div style="width:9px;height:20px;border-radius:2px;background:{{ g.bg }}"></div>
+<div style="width:9px;height:20px;border-radius:2px;background:{{ g.bg }}"></div>
+<div style="width:9px;height:20px;border-radius:2px;background:{{ g.bg }}"></div>
+</div>
+</sc-for>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:3px">
+<div class="stat"><div class="statk">UNITS THE BOOTSTRAP DRAWS FROM</div><div class="statv" style="color:{{ rsColor }}">{{ rsUnits }}</div></div>
+<div class="stat"><div class="statk">INDEPENDENT UNITS ACTUALLY COLLECTED</div><div class="statv">170</div></div>
+<div class="stat"><div class="statk">WHAT THE INTERVAL IS</div><div class="statv" style="font-size:18px;line-height:1.4;color:{{ rsColor }}">{{ rsWhat }}</div></div>
+</div>
+</div>
+<figcaption class="figcap">{{ rsCaption }}</figcaption>
+</figure>
+<p class="b" style="margin-top:24px">The same discipline governs the rest of the analysis. The paired test is an exact McNemar, chosen before data collection rather than after seeing which test was kinder. ICC and a between-versus-within variance decomposition are reported alongside it — near 1, the corpus is doing the work and more repetitions buy little; near 0, the outcome is mostly run-to-run noise and no number of such tasks settles anything. When there are too few repetitions to separate the two components, the field reads <span class="mono" style="font-size:15px;color:var(--fg)">unavailable</span> with a reason, because reporting zero would read as "no within-task variance" instead of "not measured".</p>
+</div>
+</sc-if>
+</div>
+
+<div class="acc">
+<button class="accbtn" onClick="{{ d5Tog }}"><span class="accarrow">{{ d5Arrow }}</span><span class="acct">Recording has to be cheap, or honest recording does not happen</span><span class="accs">Gate G1 · 1.4% median, measured against a live ADP</span></button>
+<sc-if value="{{ d5Open }}" hint-placeholder-val="{{ false }}">
+<div class="accbody">
+<p class="b">An instrumentation layer that costs a third of the run is an instrumentation layer people switch off for the runs that matter. So overhead is a gate, not a footnote: <strong style="color:var(--fg);font-weight:500">median recording overhead ≤ 10%, inclusive of ADP round-trips</strong> — the real system, not the recorder measured in isolation. It reads 1.4%.</p>
+<p class="b">Overhead is the recorder's cost divided by how long a step takes, so a single percentage means nothing without the step duration beside it; the curve is what says whether the headline is robust or an artifact of one choice. It stays under budget at every step duration measured, and the transferable number is the absolute one: roughly a millisecond of wall clock per recorded step, against a local ADP.</p>
+<div style="margin-top:24px;border:1px solid var(--line);border-radius:4px;overflow:hidden">
+<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--line)">
+<div class="hzh" style="text-align:left;padding-left:14px">STEP DURATION</div><div class="hzh">0.05s</div><div class="hzh">0.1s</div><div class="hzh">0.25s</div><div class="hzh">0.5s</div>
+<div class="hzn">overhead</div>
+<div class="hzc" style="color:var(--green)">+3.1%</div><div class="hzc" style="color:var(--green)">+1.5%</div><div class="hzc" style="color:var(--green)">+1.3%</div><div class="hzc" style="color:var(--green)">+0.2%</div>
+</div>
+</div>
+<p class="b" style="margin-top:24px">Two details make the measurement mean what it says. The recorded arm <em style="font-style:normal;color:var(--fg)">closes</em> inside the measurement window — the final flush is counted, because a recorder that abandoned its tail would look fast by not doing its job. And both arms simulate the step itself with a sleep, which is the honest way to isolate the recorder's cost: a real model call adds seconds of variance that swamp the thing being measured and turns the result into a fact about provider latency. What this does not establish is stated in the report rather than left to be discovered — 40 steps against a warm database on one machine is not a corpus, and a remote ADP with 50ms of latency has not been measured.</p>
+<p class="b">The property underneath the number is that a tool call never blocks on an ADP write. Events spool locally and flush asynchronously in batches with a producer sequence; a contiguity rejection replays the spool from the sequence ADP names; the spool trims at the high-water mark ADP returns. The done-condition was not "it is fast" but "kill it mid-run and the chain is still gap-free" — checked with a real <span class="mono" style="font-size:15px;color:var(--fg)">SIGKILL</span> against a live ADP, and confirmed by ADP's own completeness check rather than by this repository's opinion of itself.</p>
+</div>
+</sc-if>
+</div>
+</section>
+
+<!-- ══════════════════════ 04 WHY ADP ══════════════════════ -->
+<section class="wrap">
+<div class="kick" style="color:var(--cyan)">04 · WHY ADP</div>
+<h2 class="t" style="max-width:30ch">Evidence you grade yourself is not evidence</h2>
+<p class="b">Everything in §03 is a commitment this repository makes about its own conduct. Every one of them is worth exactly as much as the record they were applied to — and if that record lives in a log the same tool wrote, verified by a checker the same tool ships, then the whole apparatus reduces to <em style="font-style:normal;color:var(--fg)">trust me</em> with more steps. A replay harness that also owned its evidence store would be certifying itself.</p>
+<p class="b">So it doesn't own one. Every recorded step is appended to <a href="https://deduva.github.io/adp/">ADP</a> as a hash-chained session event, where each event commits to its predecessor and the chain head is what the signed artifacts carry. Snapshot bytes never leave the machine — they are attested by digest, and ADP returns a signed DSSE envelope binding the commit to that digest, so state provenance is attested without moving large payloads. A run closes against a final git sha, binding the trajectory digest to the code that was produced. The score is reported as an ordinary signed gate result carrying a <span class="mono" style="font-size:15px;color:var(--fg)">spec_digest</span>, so "the same eval, rerun" is checkable rather than asserted. And one call answers whether the whole thing holds up.</p>
+
+<figure class="fig">
+<div class="fighead">
+<span class="figlab">FIG 03 · GET /runs/{runId}/verify → A VERDICT, OR AN ERROR</span>
+<div class="ctrl">
+<button class="btn" onClick="{{ vfTamper }}">TAMPER WITH EVENT 41</button>
+<button class="btn2" onClick="{{ vfReset }}">RESTORE</button>
+</div>
+</div>
+<div style="padding:34px 28px;display:grid;grid-template-columns:1.15fr 1fr;gap:28px;align-items:start">
+<div style="display:flex;flex-direction:column;gap:8px">
+<div style="font:500 11px var(--mono);letter-spacing:.12em;color:var(--dim);margin-bottom:6px">ADP VERIFY RESPONSE — CLICK A SUB-CHECK TO FAIL IT</div>
+<sc-for list="{{ vfRows }}" as="r" hint-placeholder-count="5">
+<div onClick="{{ r.tog }}" style="display:flex;justify-content:space-between;align-items:center;gap:12px;border:1px solid {{ r.bd }};background:var(--panel2);border-radius:3px;padding:12px 14px;cursor:pointer">
+<span style="font:400 13px var(--mono);color:var(--sub)">{{ r.name }}</span>
+<span style="font:500 13px var(--mono);color:{{ r.color }}">{{ r.value }}</span>
+</div>
+</sc-for>
+<div style="font:400 12px/1.6 var(--mono);color:var(--dim);margin-top:6px">{{ vfNote }}</div>
+</div>
+<div style="border:1px solid {{ vfBd }};background:{{ vfBg }};border-radius:3px;padding:20px;display:flex;flex-direction:column;gap:14px;min-height:220px">
+<div style="font:500 11px var(--mono);letter-spacing:.12em;color:{{ vfColor }}">VERDICT FOR THIS ATTEMPT</div>
+<div style="font:500 34px var(--mono);color:{{ vfColor }}">{{ vfVerdict }}</div>
+<div style="font:400 13px/1.7 var(--mono);color:var(--sub)">{{ vfExplain }}</div>
+<sc-if value="{{ vfDowngraded }}" hint-placeholder-val="{{ false }}">
+<div style="border-top:1px solid var(--line);padding-top:14px;font:400 13px/1.7 var(--mono);color:var(--dim)">
+<div style="color:var(--red);margin-bottom:6px">downgraded_because</div>
+<sc-for list="{{ vfFailing }}" as="f" hint-placeholder-count="2">
+<div>· {{ f.name }}</div>
+</sc-for>
+</div>
+</sc-if>
+</div>
+</div>
+<figcaption class="figcap">{{ vfCaption }}</figcaption>
+</figure>
+
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:4px;margin-top:40px">
+<div class="quad"><div class="quadk">CHAINS_OK</div><div class="quadb">The events ADP holds were not edited. Every event commits to its predecessor, so tampering anywhere breaks every hash after it — and the chain covers the typed columns, not just the opaque payload.</div></div>
+<div class="quad"><div class="quadk">EMITTERS_OK</div><div class="quadb">ADP was given all of them. A perfectly valid chain can still be missing an event that never arrived, so the emitter numbers its own events and a gap is reported rather than averaged away.</div></div>
+<div class="quad"><div class="quadk">ENVELOPE + DIGEST</div><div class="quadb">The signed attestation over the run still describes the run: the DSSE envelope verifies, and the trajectory digest it names matches the chains that exist now.</div></div>
+<div class="quad"><div class="quadk">SEPARATELY_AUTHORIZED</div><div class="quadb">The identity that reported the score is not the identity that opened the run. False means the run scored its own work — a self-report, which ADP refuses to let look like anything else.</div></div>
+</div>
+
+<p class="b" style="margin-top:40px">That last one is the hinge, and it is checked at the <em style="font-style:normal;color:var(--fg)">start</em> of an experiment rather than at analysis time — a preflight opens a throwaway run, reports a throwaway eval, and reads ADP's own answer back. Discovering that every score was self-reported after the corpus is burned and the budget is spent is not a finding, it is a loss. Two different tokens are not two different principals, so the check asks the server, not the config file.</p>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:4px;margin-top:14px">
+<div style="background:var(--panel);padding:22px 20px"><div style="font:500 11px var(--mono);letter-spacing:.12em;color:var(--cyan);margin-bottom:10px">A WIRE CONTRACT, NOT A LIBRARY</div><div style="font-size:15px;line-height:1.6;color:var(--sub)">adp-replay depends on ADP over REST as a versioned contract. It links no ADP library and assumes nothing about ADP's implementation language; the client is generated from ADP's OpenAPI spec, CI fails while the generated code is stale, and the served <span class="mono" style="font-size:13px;color:var(--fg)">ADP-API-Version</span> is asserted at startup — which works because ADP serves that header on every response, including 401s, so the assertion runs before this client holds a token. A version mismatch fails loudly at the start, never mid-experiment.</div></div>
+<div style="background:var(--panel);padding:22px 20px"><div style="font:500 11px var(--mono);letter-spacing:.12em;color:var(--amber);margin-bottom:10px">AND THE CONTRACT IS TESTED, NOT ASSUMED</div><div style="font-size:15px;line-height:1.6;color:var(--sub)">Requests are typed by the spec; responses are not, because ADP documents them in prose. So a generated client can only ever type half the contract, and the untyped half is where a consumer's bugs live — which is why contract tests run against a live ADP rather than a mock. They found three real discrepancies, published as findings rather than quietly worked around, each with a test that will fail loudly when ADP fixes it.<a class="ref" href="#ref-6">6</a></div></div>
+</div>
+</section>
+
+<!-- ══════════════════════ 05 WHY NEUTRAL ══════════════════════ -->
+<section class="wrap">
+<div class="kick" style="color:var(--amber)">05 · WHY NEUTRAL</div>
+<h2 class="t" style="max-width:32ch">The party that benefits cannot be the party that certifies</h2>
+<p class="b">This is not a moral claim about anyone's conduct. It is what the word <em style="font-style:normal;color:var(--fg)">evidence</em> means in every other field that has had to make it load-bearing. Drug trials pre-register their endpoints and are audited by someone who does not sell the drug. Financial statements are signed by an auditor who is not the CFO. Safety cases are assessed by a regulator with no revenue attached to the answer. None of that machinery exists because the people involved were dishonest; it exists because the incentive gradient is real and the results are otherwise uncheckable, and everyone concerned would rather be believed than merely sincere.</p>
+<p class="b">Agentic coding evaluation has none of it. The lab that trains the model also writes the harness that runs it, owns the trajectory log the harness keeps, chooses the corpus, configures the grader, and publishes the number. That is not four safeguards failing — it is one entity occupying all four positions, so there is no second position from which the first could be checked. And the closer agent evaluation gets to procurement decisions, safety arguments, and regulatory filings, the less that arrangement will survive contact with anyone whose job is to ask for proof.</p>
+
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:44px">
+<div class="argcard">
+<div class="argk">WHY NOT A LAB'S OWN NUMBER</div>
+<p class="argb">Not because it is false — most of them are honestly produced. Because it is <em style="font-style:normal;color:var(--fg)">unfalsifiable</em>. There is no artifact to disagree with: no recorded trajectory, no attested initial state, no scorer digest, no way for a third party to re-derive the figure or to demonstrate it wrong. A claim that cannot be checked is not a strong claim that happens to lack support; it is a different kind of object. And when the harness that would have to produce the record is the same product being evaluated, "just publish the logs" asks the interested party to grade its own homework in more detail.</p>
+</div>
+<div class="argcard">
+<div class="argk">WHY NOT ANOTHER LEADERBOARD</div>
+<p class="argb">A neutral benchmark org just relocates the trust: now everyone trusts <em style="font-style:normal;color:var(--fg)">that</em> body's corpus, harness, and grader, and the same four positions are occupied by one entity with different letterhead. Benchmarks also decay — they leak into training data, get targeted, and quietly stop measuring what they were built for. What is missing is not a better-owned scoreboard. It is <strong style="color:var(--fg);font-weight:500">portable, verifiable evidence</strong>: a record shaped so that anyone's claim becomes checkable, including this project's. adp-replay publishes an instrument, not a ranking.</p>
+</div>
+<div class="argcard">
+<div class="argk">WHY NOT THE HARNESS'S OWN LOG</div>
+<p class="argb">Every harness already records something — session JSON, shadow repositories, checkpoint files — in a private format, invisible to the repository and incompatible with every other harness. Three harnesses produce three incomplete audit trails and no cross-harness comparison at all. Worse, a log the harness can rewrite is not tamper-evident, and one nobody outside can verify is decoration. ADP's contribution is exactly this: a hash-chained, signed, third-party-verifiable record with one endpoint that says whether it holds up — <em style="font-style:normal;color:var(--fg)">falsifiable by any holder of a read token</em>.</p>
+</div>
+</div>
+
+<p class="b" style="margin-top:44px">Neutrality here is a set of mechanical properties, not a posture. <strong style="color:var(--fg);font-weight:500">No provider is special-cased</strong> — three providers, a symmetric pair matrix, and the fidelity gate applied identically in both directions of every pair; a narrowing of provider scope is an option the gate offers explicitly rather than a quiet exclusion. <strong style="color:var(--fg);font-weight:500">No provider is called anywhere in the package</strong> — the agent is an injected protocol, so nothing about a vendor's API is baked into the instrument. <strong style="color:var(--fg);font-weight:500">The scorer must be a different principal than the runner</strong>, asserted before spend, or the experiment does not start. <strong style="color:var(--fg);font-weight:500">The evidence store is somebody else's</strong>, reached over a versioned wire contract with no linked library. And <strong style="color:var(--fg);font-weight:500">everything is re-derivable</strong>: the manifest digest is computed over the canonical form with the run id excluded, so a published manifest verifies from the file alone, on a machine that has never heard of where it was stored.</p>
+<p class="b">Apache-2.0, both projects. The point of doing it this way is that the result does not depend on anyone's opinion of the people who produced it — including ours.</p>
+</section>
+
+<!-- ══════════════════════ 06 REFUSALS ══════════════════════ -->
+<section class="wrap">
+<div class="kick" style="color:var(--cyan)">06 · REFUSALS</div>
+<h2 class="t" style="max-width:32ch">What it will not say, and where that is enforced</h2>
+<p class="b">The characteristic failure of an evaluation system is not a wrong number. It is a number that should never have been produced — a comparison across two different scorers, a diagnostic quoted as a comparison, a corpus quietly smaller than the design called for, an unverifiable run counted as a pass. Each of those is a small, reasonable-seeming step taken under deadline pressure, and each is invisible in the published artifact.</p>
+<p class="b">So they are foreclosed in code rather than in a style guide. Every refusal below has a test that fails if the refusal stops working; each one gives up something real, which is why it is listed with what it costs.</p>
+
+<div class="acc">
+<button class="accbtn" onClick="{{ x1Tog }}"><span class="accarrow">{{ x1Arrow }}</span><span class="acct">It refuses to write a corpus smaller than the design requires</span><span class="accs">build_corpus · Task 1.3</span></button>
+<sc-if value="{{ x1Open }}" hint-placeholder-val="{{ false }}">
+<div class="accbody"><p class="b">The corpus builder takes its target from the power analysis and will not emit a corpus file that falls short of it. The obvious shortcut — run the auditor over whatever tasks are lying around, ship the file, describe the shortfall in a footnote nobody reads — is unavailable, because the file itself does not get written. <strong style="color:var(--fg);font-weight:500">What it costs:</strong> right now, the corpus. Terminal Bench is not installable in this build environment, so <span class="mono" style="font-size:15px;color:var(--fg)">tb2_closed_corpus.json</span> does not exist and Task 1.3's done-condition is not met — which is exactly the outcome this refusal is for. The gap is visible instead of papered over.</p></div>
+</sc-if>
+</div>
+
+<div class="acc">
+<button class="accbtn" onClick="{{ x2Tog }}"><span class="accarrow">{{ x2Arrow }}</span><span class="acct">It refuses to aggregate results produced by different scorers</span><span class="accs">replay runner · scorer spec_digest</span></button>
+<sc-if value="{{ x2Open }}" hint-placeholder-val="{{ false }}">
+<div class="accbody"><p class="b">Scorer identity is ADP's <span class="mono" style="font-size:15px;color:var(--fg)">spec_digest</span> on the eval. Two results produced by different scorers are not comparable, and combining them is how an eval-gated comparison lands the wrong winner while every individual number is correct. A deliberate digest mismatch errors out rather than aggregating. <strong style="color:var(--fg);font-weight:500">What it costs:</strong> a mid-experiment scorer fix invalidates the arm rather than silently splicing two regimes together — you re-run, or you report two experiments.</p></div>
+</sc-if>
+</div>
+
+<div class="acc">
+<button class="accbtn" onClick="{{ x3Tog }}"><span class="accarrow">{{ x3Arrow }}</span><span class="acct">It refuses to start when the scorer and the runner are the same principal</span><span class="accs">runner identity preflight · before any spend</span></button>
+<sc-if value="{{ x3Open }}" hint-placeholder-val="{{ false }}">
+<div class="accbody"><p class="b">Starting a run with a single shared token fails immediately with a clear message. The check runs before the first model call, not at analysis time — a corpus scored entirely by its own runner is not salvageable after the fact, and finding out later costs the whole budget. <strong style="color:var(--fg);font-weight:500">What it costs:</strong> operational friction. Two principals must be provisioned before anything runs, which is precisely the friction that makes the resulting <span class="mono" style="font-size:15px;color:var(--fg)">separately_authorized</span> mean something.</p></div>
+</sc-if>
+</div>
+
+<div class="acc">
+<button class="accbtn" onClick="{{ x4Tog }}"><span class="accarrow">{{ x4Arrow }}</span><span class="acct">It refuses to let a continuation diagnostic be read as a model comparison</span><span class="accs">banner computed from the mode, not stored</span></button>
+<sc-if value="{{ x4Open }}" hint-placeholder-val="{{ false }}">
+<div class="accbody"><p class="b">Every fork-at-step artifact, report, and console run carries the banner verbatim, and it cannot be suppressed by configuration because it is derived from the run's mode rather than stored as a field someone could set to false. The report schema goes further: the <span class="mono" style="font-size:15px;color:var(--fg)">is_model_comparison</span> flag is true only when <em style="font-style:normal;color:var(--fg)">every</em> result in the document is fork-at-zero. <strong style="color:var(--fg);font-weight:500">What it costs:</strong> the most quotable finding this instrument can produce is permanently harder to quote — which is the point, because it is the one most likely to be repeated without its caveat.</p></div>
+</sc-if>
+</div>
+
+<div class="acc">
+<button class="accbtn" onClick="{{ x5Tog }}"><span class="accarrow">{{ x5Arrow }}</span><span class="acct">It refuses to score an unverifiable run as a pass or a fail</span><span class="accs">evidence gating · verdict becomes error</span></button>
+<sc-if value="{{ x5Open }}" hint-placeholder-val="{{ false }}">
+<div class="accbody"><p class="b">A pass and a fail are both claims about the model. A run whose evidence does not stand up supports neither, so it becomes <span class="mono" style="font-size:15px;color:var(--red)">error</span>, with the failing sub-check recorded so the downgrade is diagnosable rather than merely observed. Errors then count <em style="font-style:normal;color:var(--fg)">against</em> the majority when deciding whether a task was solved — one pass and four unverifiable attempts does not report as solved. Verified by tampering with a stored event and watching the verdict change. <strong style="color:var(--fg);font-weight:500">What it costs:</strong> a flaky recorder shows up as a worse-looking model rather than as a smaller sample, which is the conservative direction and the uncomfortable one.</p></div>
+</sc-if>
+</div>
+
+<div class="acc">
+<button class="accbtn" onClick="{{ x6Tog }}"><span class="accarrow">{{ x6Arrow }}</span><span class="acct">It refuses to present a round-trip fidelity reading as a grounded one</span><span class="accs">G0 report · grounding: round_trip_only</span></button>
+<sc-if value="{{ x6Open }}" hint-placeholder-val="{{ false }}">
+<div class="accbody"><p class="b">The registered metric has two halves: a round-trip through this repository's translators, and a grounding check that the rendered request is actually accepted by the target provider's API. Only the first has run, and the report says <span class="mono" style="font-size:15px;color:var(--fg)">round_trip_only</span> in its header rather than reporting a number that reads as more than it is. Likewise, an amended metric prints its pre-amendment numbers beside the current ones in every report, permanently, so the correction stays checkable by someone who did not watch it happen. <strong style="color:var(--fg);font-weight:500">What it costs:</strong> the gate's headline is weaker than the figure would allow — G0 passes at 0.951, with a label saying what that 0.951 is not.</p></div>
+</sc-if>
+</div>
+
+<div class="acc">
+<button class="accbtn" onClick="{{ x7Tog }}"><span class="accarrow">{{ x7Arrow }}</span><span class="acct">It refuses to bury a limitation behind a conclusion</span><span class="accs">report schema · key order is part of the schema</span></button>
+<sc-if value="{{ x7Open }}" hint-placeholder-val="{{ false }}">
+<div class="accbody"><p class="b">State completeness and median context fidelity come before the statistics — in the HTML and in the JSON, where the ordering of the top-level keys is specified as part of the schema. Both are limits on what the numbers mean, and a limit that appears after the conclusion has already been read is not a limit. A consumer that reads only the head of the document still gets them. The same rule governs the write-up: the state-completeness specification is reprinted verbatim in the limitations section. And <span class="mono" style="font-size:15px;color:var(--fg)">null</span> fidelity means <em style="font-style:normal;color:var(--fg)">not measured</em>, which the schema distinguishes from zero. <strong style="color:var(--fg);font-weight:500">What it costs:</strong> every report opens by telling you what it cannot tell you.</p></div>
+</sc-if>
+</div>
+</section>
+
+<!-- ══════════════════════ 07 STATUS ══════════════════════ -->
+<section class="wrap">
+<div class="kick" style="color:var(--cyan)">07 · WHERE IT STANDS</div>
+<h2 class="t" style="max-width:28ch">Built, gated, and not yet run</h2>
+<div style="border:1px solid var(--line);background:var(--panel);border-radius:4px;padding:28px">
+<p class="b" style="max-width:74ch">Phases 0 through 3 are implemented and merged, against a live ADP serving contract 0.1.0. <strong style="color:var(--fg);font-weight:500">Both gates pass:</strong> G0 at 0.951 median fidelity on the worst in-scope cell, G1 at 1.4% recording overhead against a 10% budget. Working end to end: the self-certifying manifest and its digest; the content-addressed store and reproducible filesystem capture, attested to ADP by digest with the bytes never leaving the machine; the recorder and its spool, which survives a real <span class="mono" style="font-size:15px;color:var(--fg)">SIGKILL</span> and resumes into a gap-free chain; fork-at-zero, the fork-at-step diagnostic, and the runner's identity preflight; exact McNemar, bootstrap intervals over tasks, ICC and variance decomposition; self-contained HTML and JSON reports; and evidence gating, checked by actually tampering with a stored event.</p>
+<p class="b" style="max-width:74ch">Three things are <strong style="color:var(--fg);font-weight:500">not</strong> done, each blocked on a dependency unavailable in the build environment, and each enforced as unfinished in code rather than merely noted. <strong style="color:var(--fg);font-weight:500">The corpus:</strong> the closure auditor is complete, but Terminal Bench is not installable here, so the corpus file does not exist and the builder refuses to write a short one. <strong style="color:var(--fg);font-weight:500">Any real model call:</strong> no provider is contacted anywhere in the package — the agent is an injected protocol, and running the experiment is Phase 4 work needing keys and budget. <strong style="color:var(--fg);font-weight:500">The Inspect binding:</strong> <span class="mono" style="font-size:15px;color:var(--fg)">inspect-ai</span> could not be installed, so the wrapper is verified against a fake solver of the same shape and says so in its own docstring.</p>
+<p class="b" style="margin:0;color:var(--dim);max-width:74ch">The target state is one artifact: the full experiment at the scale the power analysis recommends, across providers, with every manifest and every report published alongside a write-up that leads with fork-at-zero — the state-completeness specification reprinted verbatim in its limitations, and any fork-at-step result carrying its banner. The instrument is finished. The measurement is not, and this page does not claim otherwise.</p>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:4px;margin-top:14px">
+<div class="quad"><div class="quadk" style="color:var(--green)">GATE G0 — FIDELITY</div><div class="quadb"><span class="mono" style="color:var(--green)">PASS</span> · 0.951 on the worst in-scope cell against a pre-registered 0.85, round-trip-only, with Amendment 1's before-and-after printed in every report.</div></div>
+<div class="quad"><div class="quadk" style="color:var(--green)">GATE G1 — OVERHEAD</div><div class="quadb"><span class="mono" style="color:var(--green)">PASS</span> · 1.4% median against a 10% budget, inclusive of ADP round-trips, and under budget at every step duration measured.</div></div>
+<div class="quad"><div class="quadk" style="color:var(--amber)">TASK 1.3 — CORPUS</div><div class="quadb"><span class="mono" style="color:var(--amber)">NOT MET</span> · the auditor is done; the corpus is not. 213 tasks need auditing against a real Terminal Bench checkout to leave 170 closed ones.</div></div>
+</div>
+</section>
+
+<footer class="wrap" style="padding-top:96px">
+<div style="border-top:1px solid var(--line);padding-top:24px;display:flex;gap:32px;flex-wrap:wrap;font:400 13px var(--mono);color:var(--dim)">
+<a href="https://github.com/DeDuva/adp-replay">github.com/DeDuva/adp-replay</a>
+<a href="https://github.com/DeDuva/adp-replay/blob/main/docs/execution-plan.md">docs/execution-plan.md</a>
+<a href="https://github.com/DeDuva/adp-replay/blob/main/docs/pre-registration.md">docs/pre-registration.md</a>
+<a href="https://deduva.github.io/adp/">why ADP exists</a>
+<span>Apache-2.0 code · CC-BY prose</span>
+</div>
+<div style="margin-top:28px;font:500 12px var(--mono);letter-spacing:.12em;color:var(--dim)">SOURCES — EVERY NUMBER ON THIS PAGE IS RE-DERIVABLE FROM THE REPOSITORY</div>
+<ol class="refs">
+<li id="ref-1">The plan of record, its gates, its cut lines, and its kill criteria — <a href="https://github.com/DeDuva/adp-replay/blob/main/docs/execution-plan.md">docs/execution-plan.md</a></li>
+<li id="ref-2">Corpus size, assumptions, sensitivity curves, and the cheaper designs that were rejected — <a href="https://github.com/DeDuva/adp-replay/blob/main/docs/power-analysis.md">docs/power-analysis.md</a>. Regenerate with <span style="color:var(--sub)">adp-replay power</span>.</li>
+<li id="ref-3">The fidelity metric, its weights, its pass mark, and Amendment 1 — <a href="https://github.com/DeDuva/adp-replay/blob/main/docs/pre-registration.md">docs/pre-registration.md</a>; the reading itself, with pre-amendment numbers, in <a href="https://github.com/DeDuva/adp-replay/blob/main/docs/g0-fidelity-report.md">docs/g0-fidelity-report.md</a>. Regenerate with <span style="color:var(--sub)">adp-replay fidelity</span>.</li>
+<li id="ref-4">The overhead curve, how it was measured, and what it does not establish — <a href="https://github.com/DeDuva/adp-replay/blob/main/docs/g1-overhead-report.md">docs/g1-overhead-report.md</a></li>
+<li id="ref-5">Verdict fields, the never-an-appendix key ordering, and why errors count against the majority — <a href="https://github.com/DeDuva/adp-replay/blob/main/docs/report-schema.md">docs/report-schema.md</a></li>
+<li id="ref-6">The three discrepancies found building the client against a live ADP, each with a test that fails when ADP fixes it — <a href="https://github.com/DeDuva/adp-replay/blob/main/docs/adp-contract-findings.md">docs/adp-contract-findings.md</a></li>
+<li id="ref-7">The closure policy, the hazard table, and why the corpus file records its own rejects — <a href="https://github.com/DeDuva/adp-replay/blob/main/docs/closure-audit.md">docs/closure-audit.md</a></li>
+<li id="ref-8">The trust properties this project consumes rather than reimplements — runs, hash-chained trajectories, signed attestation, eval identity, and one verify endpoint — <a href="https://github.com/DeDuva/adp/blob/main/docs/trajectory-eval-slice.md">ADP docs/trajectory-eval-slice.md</a></li>
+<li id="ref-9">The case for a neutral agent-native substrate, and the gap this project fills on top of it — <a href="https://deduva.github.io/adp/">deduva.github.io/adp</a>, <a href="https://github.com/DeDuva/adp/blob/main/docs/agent-native-vcs-brief-v5.md">ADP technical brief v5</a></li>
+</ol>
+</footer>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;forkStep&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:5,&quot;min&quot;:1,&quot;max&quot;:10,&quot;step&quot;:1,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Simulation&quot;},&quot;trajectoryLength&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:12,&quot;min&quot;:6,&quot;max&quot;:24,&quot;step&quot;:1,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Simulation&quot;}}">
+class Component extends DCLogic {
+  state = {
+    expand: {},
+    // FIG 01 — what varied. true means "this factor moved between the two results".
+    conf: { harness: true, corpus: true, state: true, scorer: true },
+    fork: "zero",
+    suppressAttempts: 0,
+    pwIdx: 2,
+    resample: "tasks",
+    verify: {
+      chains_ok: true,
+      emitters_ok: true,
+      envelope_verified: true,
+      trajectory_digest_matches: true,
+      separately_authorized: true
+    }
+  };
+
+  toggle(k) { this.setState(s => ({ expand: { ...s.expand, [k]: !s.expand[k] } })); }
+
+  setConf(k, v) { this.setState(s => ({ conf: { ...s.conf, [k]: v } })); }
+  flipConf(k) { this.setState(s => ({ conf: { ...s.conf, [k]: !s.conf[k] } })); }
+  allConf(v) { this.setState({ conf: { harness: v, corpus: v, state: v, scorer: v } }); }
+
+  flipCheck(k) { this.setState(s => ({ verify: { ...s.verify, [k]: !s.verify[k] } })); }
+
+  renderVals() {
+    const ex = {};
+    ["d1","d2","d3","d4","d5","x1","x2","x3","x4","x5","x6","x7"].forEach(k => {
+      const open = !!this.state.expand[k];
+      ex[k + "Open"] = open;
+      ex[k + "Tog"] = () => this.toggle(k);
+      ex[k + "Arrow"] = open ? "▾" : "▸";
+    });
+
+    // ── FIG 01 · what actually varied ──────────────────────────────
+    const c = this.state.conf;
+    const factors = [
+      { key: "model", name: "MODEL", locked: true, note: "the thing you wanted to measure" },
+      { key: "harness", name: "HARNESS", note: "scaffold, prompt, tool set, retry policy" },
+      { key: "corpus", name: "CORPUS", note: "which tasks, and who chose them" },
+      { key: "state", name: "INITIAL STATE", note: "the exact bytes the run starts from" },
+      { key: "scorer", name: "SCORER", note: "the grader, and its spec digest" }
+    ];
+    const cfCells = factors.map(f => {
+      const varies = f.locked ? true : !!c[f.key];
+      return {
+        name: f.name,
+        state: f.locked ? "substituted" : (varies ? "varies" : "pinned"),
+        color: f.locked ? "#4fd1d9" : (varies ? "#e0a458" : "#57d9a3"),
+        note: f.note,
+        cursor: f.locked ? "default" : "pointer",
+        tog: f.locked ? (() => {}) : (() => this.flipConf(f.key))
+      };
+    });
+    const moved = ["harness","corpus","state","scorer"].filter(k => c[k]);
+    const cfCount = String(moved.length + 1);
+    const clean = moved.length === 0;
+    const cfCaption = clean
+      ? "one factor moved, so the difference is attributable to it. This is fork-at-zero, and it is the only configuration on this page that supports the sentence \"model B is better at this than model A\"."
+      : "with " + (moved.length + 1) + " factors in motion, the observed difference is a joint effect and no part of it can be assigned to the model. Published agentic results are almost always in this state — not because anyone hid anything, but because nothing ever pinned the other four.";
+
+    // ── FIG 02 · fork-at-zero vs fork-at-step ──────────────────────
+    const T = this.props.trajectoryLength ?? 12;
+    const K = Math.min(this.props.forkStep ?? 5, T - 1);
+    const isStep = this.state.fork === "step";
+    const fkA = [];
+    const fkB = [];
+    const amber = { bg: "rgba(224,164,88,.4)", bd: "rgba(224,164,88,.5)" };
+    const cyan = { bg: "rgba(79,209,217,.4)", bd: "rgba(79,209,217,.5)" };
+    const forkAt = isStep ? K : 0;
+    for (let i = 0; i < T; i++) {
+      // Arm B carries model A's prefix up to the fork point, then substitutes.
+      const src = (isStep && i < K) ? amber : cyan;
+      const mark = i === forkAt ? "inset 3px 0 0 #e9e7e2" : "none";
+      fkA.push({ bg: amber.bg, bd: amber.bd, label: String(i), mark: "none" });
+      fkB.push({ bg: src.bg, bd: src.bd, label: String(i), mark: mark });
+    }
+    const suppressMsgs = [
+      "",
+      "refused — the banner is computed from the run's mode, not stored. There is no field to set.",
+      "still refused. This is Task 2.2's done-condition: the banner cannot be suppressed by configuration.",
+      "the report schema also flags is_model_comparison false whenever any result is fork-at-step. There is no way through."
+    ];
+    const sup = Math.min(this.state.suppressAttempts, suppressMsgs.length - 1);
+
+    // ── power sensitivity (docs/power-analysis.md) ─────────────────
+    const effects = ["0.05", "0.075", "0.10", "0.125", "0.15"];
+    const powers = [0.282, 0.562, 0.812, 0.935, 0.989];
+    const pi = this.state.pwIdx;
+    const pw = powers[pi];
+    const pwOk = pw >= 0.8;
+    const pwCaptions = [
+      "a five-point true effect: the design detects it barely a quarter of the time. Reporting \"no significant difference\" here would be a statement about the corpus size, not about the models.",
+      "at 7.5 points the design still misses more often than it finds. This is the region where an underpowered study quietly produces a null result and someone believes it.",
+      "the design point. 170 tasks × 3 repetitions clears the 0.8 target against the effect size the analysis was built to detect.",
+      "comfortably powered — and worth noting that a larger true effect needs no more corpus, so the design was not sized against the answer anyone hoped for.",
+      "at fifteen points the design is near-certain to detect the effect. The risk this design carries is entirely on the other side of the slider."
+    ];
+
+    // ── resampling unit ───────────────────────────────────────────
+    const rsTasks = this.state.resample === "tasks";
+    const rsGroups = [];
+    for (let i = 0; i < 20; i++) {
+      rsGroups.push({
+        bg: rsTasks ? "rgba(79,209,217,.45)" : "rgba(224,164,88,.45)",
+        bd: rsTasks ? "rgba(79,209,217,.5)" : "transparent",
+        pad: rsTasks ? "4px" : "0px"
+      });
+    }
+
+    // ── verify ────────────────────────────────────────────────────
+    const v = this.state.verify;
+    const checkNames = [
+      "chains_ok",
+      "emitters_ok",
+      "envelope_verified",
+      "trajectory_digest_matches",
+      "separately_authorized"
+    ];
+    const failing = checkNames.filter(k => !v[k]);
+    const okAll = failing.length === 0;
+    const vfRows = checkNames.map(k => ({
+      name: k,
+      value: v[k] ? "true" : "false",
+      color: v[k] ? "#57d9a3" : "#e4695e",
+      bd: v[k] ? "var(--line)" : "rgba(228,105,94,.5)",
+      tog: () => this.flipCheck(k)
+    }));
+    const selfReported = !v.separately_authorized;
+    const vfExplain = okAll
+      ? "The chain was not edited, nothing was withheld, the attestation over it verifies, and the score was reported by a principal other than the one that opened the run. This attempt's pass or fail is admissible, and every input to it can be re-checked by any holder of a read token."
+      : (failing.length === 1 && selfReported
+        ? "The evidence is intact, but the run scored its own work. A self-report is not refused — it is refused the right to look like something else, so the verdict is not admissible as an independent result."
+        : "One of the sub-checks came back false, so the verdict is downgraded. A pass and a fail are both claims about the model; a run whose evidence does not stand up supports neither.");
+    const vfCaptions = {
+      ok: "verify returns one ok alongside the sub-checks that produced it. Click any of them — or tamper with an event — and watch what the verdict is allowed to be.",
+      bad: "an unverifiable result is never counted as a pass or a fail. The failing sub-check is recorded with the verdict, so a downgrade is diagnosable rather than merely observed."
+    };
+
+    return Object.assign(ex, {
+      // fig 01
+      cfCells: cfCells,
+      cfCount: cfCount,
+      cfCountColor: clean ? "#4fd1d9" : "#e0a458",
+      cfVerdict: clean ? "the model" : "nothing — it is a joint effect",
+      cfVerdictColor: clean ? "#4fd1d9" : "#e4695e",
+      cfCaption: cfCaption,
+      cfPin: () => this.allConf(false),
+      cfReset: () => this.allConf(true),
+
+      // fig 02
+      fkA: fkA, fkB: fkB,
+      fkZero: () => this.setState({ fork: "zero", suppressAttempts: 0 }),
+      fkStep: () => this.setState({ fork: "step" }),
+      fkZeroBg: isStep ? "transparent" : "#e9e7e2",
+      fkZeroFg: isStep ? "#8b9098" : "#0d0e10",
+      fkStepBg: isStep ? "#e9e7e2" : "transparent",
+      fkStepFg: isStep ? "#0d0e10" : "#8b9098",
+      fkBLabel: isStep
+        ? "REPLAY ARM — MODEL A'S FIRST " + K + " STEPS, THEN MODEL B"
+        : "REPLAY ARM — SAME TASK, SAME BASE STATE, MODEL B FROM STEP 0",
+      fkForkColor: isStep ? "#e0a458" : "#4fd1d9",
+      fkForkNote: isStep
+        ? "fork at step " + K + " — everything left of the marker is a prefix model B did not write and would not have written"
+        : "fork at step 0 — the marker sits at the beginning, which is the only place it can sit and still be a model comparison",
+      fkVary: isStep ? "the model, from step " + K + " onward — over a prefix model B did not produce" : "the model, and nothing else",
+      fkVaryColor: isStep ? "#e0a458" : "#4fd1d9",
+      fkMeasures: isStep
+        ? "how well B continues A's policy prefix"
+        : "which model solves more of these tasks",
+      fkBanner: isStep,
+      fkSuppress: () => this.setState(s => ({ suppressAttempts: s.suppressAttempts + 1 })),
+      fkSuppressMsg: suppressMsgs[sup],
+      fkSuppressColor: sup === 0 ? "#8b9098" : "#e4695e",
+      fkCaption: isStep
+        ? "a continuation diagnostic. Useful — it says something real about robustness to an unfamiliar prefix — and it is not a model comparison, because the two arms did not face the same problem."
+        : "fork-at-zero. Both arms answer the same task from the same bytes through the same harness against the same scorer, so the outcomes are paired per task and the difference is attributable to the substitution.",
+
+      // power
+      pwIdx: pi,
+      pwSet: ev => this.setState({ pwIdx: Number(ev.target.value) }),
+      pwEffect: effects[pi],
+      pwValue: pw.toFixed(3),
+      pwW: (pw * 100).toFixed(1) + "%",
+      pwFill: pwOk ? "rgba(79,209,217,.55)" : "rgba(228,105,94,.5)",
+      pwColor: pwOk ? "#4fd1d9" : "#e4695e",
+      pwVerdict: pwOk ? "adequate" : "underpowered",
+      pwCaption: pwCaptions[pi],
+
+      // resampling
+      rsGroups: rsGroups,
+      rsTask: () => this.setState({ resample: "tasks" }),
+      rsTraj: () => this.setState({ resample: "trajectories" }),
+      rsTaskBg: rsTasks ? "#e9e7e2" : "transparent",
+      rsTaskFg: rsTasks ? "#0d0e10" : "#8b9098",
+      rsTrajBg: rsTasks ? "transparent" : "#e9e7e2",
+      rsTrajFg: rsTasks ? "#8b9098" : "#0d0e10",
+      rsGap: rsTasks ? "10px" : "3px",
+      rsUnits: rsTasks ? "170 tasks" : "510 trajectories",
+      rsColor: rsTasks ? "#4fd1d9" : "#e4695e",
+      rsWhat: rsTasks ? "an honest interval" : "narrower, on no new evidence",
+      rsCaption: rsTasks
+        ? "the boxes are tasks; the three bars inside each are its repetitions. The bootstrap draws whole tasks, because the task is the unit the experiment collected independently. 20 of 170 shown."
+        : "the boxes are gone and every repetition counts as its own sample. Nothing was measured that was not measured before — the interval simply shrinks, by about √3 in the limiting case, and the p-value follows it.",
+
+      // verify
+      vfRows: vfRows,
+      vfVerdict: okAll ? "pass" : "error",
+      vfColor: okAll ? "#57d9a3" : "#e4695e",
+      vfBd: okAll ? "rgba(87,217,163,.35)" : "rgba(228,105,94,.45)",
+      vfBg: okAll ? "rgba(87,217,163,.05)" : "rgba(228,105,94,.06)",
+      vfExplain: vfExplain,
+      vfDowngraded: !okAll,
+      vfFailing: failing.map(k => ({ name: k })),
+      vfNote: okAll
+        ? "null is not false: ADP reports envelope_verified as null for a run it never attested, and treating not-applicable as failed would downgrade every open run."
+        : "a missing sub-check is treated as a failure, not as an absence — assuming the best about a field that is not there is how a gate stops gating.",
+      vfTamper: () => this.setState(s => ({ verify: { ...s.verify, chains_ok: false } })),
+      vfReset: () => this.setState({ verify: { chains_ok: true, emitters_ok: true, envelope_verified: true, trajectory_digest_matches: true, separately_authorized: true } }),
+      vfCaption: okAll ? vfCaptions.ok : vfCaptions.bad
+    });
+  }
+}
+</script>
+</body>
+</html>
