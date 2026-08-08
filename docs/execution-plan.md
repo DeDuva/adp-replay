@@ -11,17 +11,50 @@ deliverable and its done-condition. Gates are hard stops.
 > `docs/pre-registration.md`), **G1** 1.4% recording overhead against a 10% budget. The power
 > analysis fixes the corpus at **170 tasks × 3 repetitions**.
 >
-> Three things below are **not** done, each blocked on a dependency unavailable in the build
-> environment and each enforced as unfinished in code rather than merely noted:
+> Three things below are **not** done. Each is still enforced as unfinished in code rather than
+> merely noted — but **none of them is blocked any more.** See the retry note.
 >
-> - **Task 1.3's corpus.** The auditor is complete; `tb2_closed_corpus.json` does not exist, because
->   Terminal Bench is not installed. `build_corpus` refuses to write a corpus below the target.
+> - **Task 1.3's corpus.** The auditor is complete; `tb2_closed_corpus.json` does not exist, and
+>   `build_corpus` refuses to write a corpus below the target. **Unblocked — `terminal-bench`
+>   installs. Not yet run.**
 > - **Phase 4, and any real model call.** No provider is contacted anywhere in the package — the
->   agent is an injected protocol. This needs keys and budget.
-> - **The Inspect binding in Task 1.4.** `inspect-ai` could not be installed; the wrapper is verified
->   against a fake solver of the same shape and says so in its own docstring.
+>   agent is an injected protocol. **Not blocked on access:** working Anthropic and Gemini keys sit
+>   at `~/.config/squad/` and are in daily use by sibling projects. **Needs a budget decision, and
+>   nothing else.**
+> - **The Inspect binding in Task 1.4.** The wrapper is verified against a fake solver of the same
+>   shape and says so in its own docstring. **Unblocked — `inspect-ai` installs.**
 >
 > Per-task status is in `README.md`; the reasoning behind each decision is in the merged PRs.
+
+> **Retry note, 2026-08-08 — the dependency blocker was never real.**
+>
+> All three items above were recorded as *"blocked on a dependency unavailable in the build
+> environment."* That was one mistake generalised into three. The **system** interpreter is Python
+> 3.14 with no `ensurepip`, so `python3 -m venv` fails and the fix needs `sudo apt`, which is
+> unavailable here. But **uv left a managed CPython 3.12 on disk that ships a working `pip`**, and
+> PyPI is reachable.
+>
+> ```sh
+> # `python3` cannot create a venv on this machine. Use the uv-managed interpreter:
+> ~/.local/share/uv/python/cpython-3.12-linux-x86_64-gnu/bin/python3.12 -m venv .venv
+> .venv/bin/python -m pip install <package>
+> ```
+>
+> Retried 2026-08-08 — both packages previously recorded as impossible:
+>
+> | Package | Result |
+> |---|---|
+> | `inspect-ai` | installs — **0.3.253**, imports clean |
+> | `terminal-bench` | installs — exit 0, imports clean |
+>
+> Docker works too (runs and pulls images), which Terminal Bench needs. `uv` itself is still absent
+> and is not required. There is still no passwordless `sudo`, so anything needing `apt` remains out
+> of reach.
+>
+> **What the mistake cost:** Phase 4 is this project's *primary capability* — fork-at-zero replay
+> under a substituted model — and it has never been executed, on the strength of a blocker that a
+> single command disproves. Nothing above needs new access. The corpus and the Inspect binding need
+> only time; Phase 4 needs a budget number.
 
 ---
 

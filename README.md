@@ -44,15 +44,18 @@ Phase 0 in progress.
   actually tampering with a stored event.
 - **2.1, 2.2, 2.3** — replay: fork-at-zero, the fork-at-step diagnostic with an unsuppressible
   banner, and the runner's identity preflight. **No provider is called anywhere in the package** —
-  the agent is an injected protocol, so running the real experiment is Phase 4 work needing keys
-  and budget.
+  the agent is an injected protocol, so running the real experiment is Phase 4 work. **It needs a
+  budget decision, not access** — working provider keys are already present on this machine and in
+  daily use by sibling projects.
 - **1.5** — the [overhead benchmark](docs/g1-overhead-report.md). **Gate G1 passes**: 1.4% median
   overhead against a 10% budget, inclusive of ADP round-trips, and under budget at every step
   duration measured.
 - **1.3** — the [closure audit](docs/closure-audit.md). The auditor is done; **the corpus is not**.
-  Terminal Bench is not available here, so `tb2_closed_corpus.json` has not been built and the
-  done-condition is not met. `build_corpus` refuses to write a corpus that falls short of the
-  Task 0.4 target, so this cannot be quietly claimed later.
+  `tb2_closed_corpus.json` has not been built, so the done-condition is not met. `build_corpus`
+  refuses to write a corpus that falls short of the Task 0.4 target, so this cannot be quietly
+  claimed later. **This is no longer blocked:** Terminal Bench was recorded as unavailable here,
+  and on 2026-08-08 it installed without trouble — see the retry note in
+  [the execution plan](docs/execution-plan.md). It needs running, not unblocking.
 
 Everything else under `src/adp_replay/` is still a typed stub naming the task that fills it in.
 
