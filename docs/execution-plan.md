@@ -15,8 +15,11 @@ deliverable and its done-condition. Gates are hard stops.
 > merely noted — but **none of them is blocked any more.** See the retry note.
 >
 > - **Task 1.3's corpus.** The auditor is complete; `tb2_closed_corpus.json` does not exist, and
->   `build_corpus` refuses to write a corpus below the target. **Unblocked — `terminal-bench`
->   installs. Not yet run.**
+>   `build_corpus` refuses to write a corpus below the target. **Unblocked, and now run — with a
+>   result that matters: 0 of 80 tasks in `terminal-bench-core` 0.1.1 are closed, 100% attrition,
+>   every one of them on a genuine run-time network dependency.** See
+>   [`corpus-status.md`](corpus-status.md). The 1.25× audit ratio this plan assumes does not
+>   survive contact with that corpus.
 > - **Phase 4, and any real model call.** No provider is contacted anywhere in the package — the
 >   agent is an injected protocol. **Not blocked on access:** working Anthropic and Gemini keys sit
 >   at `~/.config/squad/` and are in daily use by sibling projects. **Needs a budget decision, and

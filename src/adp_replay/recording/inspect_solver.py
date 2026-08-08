@@ -8,14 +8,23 @@ verification of an already-recorded experiment must not require the recorder's
 dependencies to resolve — someone checking a published manifest should not need
 the harness stack installed to do it.
 
-**This adapter has not been exercised against a real Inspect installation.**
-``inspect-ai`` could not be installed in the environment this was built in, so
-what is verified is the recording logic against a fake solver with the same
-shape. The seam is deliberately thin for that reason: everything that could be
-wrong about ADP, batching, sequencing, or resume lives in :class:`Recorder` and
-is tested there and against a live ADP. What is unverified here is the shape of
-Inspect's own types, which is the part a first real run will find immediately
-and cheaply.
+**Bound against a real Inspect since 2026-08-08.** This adapter was written
+without one: ``inspect-ai`` was believed to be uninstallable in the environment
+it was built in, so the shape of Inspect's types was assumed rather than checked,
+and this docstring said so. The belief was wrong — the system interpreter could
+not build a venv, which is not the same thing as the package being unavailable.
+
+``tests/test_inspect_binding.py`` now runs against a real installation and
+asserts what a Protocol cannot assert for itself: that Inspect's own ``Solver``
+accepts a :class:`RecordingSolver` — via ``isinstance``, since Inspect marks that
+protocol ``@runtime_checkable``, making it Inspect's judgement rather than this
+module's reading of the docs — that a real ``TaskState`` round-trips unharmed,
+and that :meth:`_wrap_generate` preserves ``Generate``'s full call shape instead
+of flattening the ``tool_calls`` argument.
+
+The seam stays thin regardless: everything that could be wrong about ADP,
+batching, sequencing or resume lives in :class:`Recorder`, is tested there, and
+is exercised against a live ADP by the contract suite.
 """
 
 from __future__ import annotations
