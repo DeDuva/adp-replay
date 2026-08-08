@@ -270,7 +270,7 @@
   "info": {
     "description": "Native and compat-plane HTTP surface for ADP \u2014 see docs/pragmatic_mvp.md \u00a72.4 for what is in scope and \u00a72.5 for what is deliberately cut.\nTwo planes share this file. `/api/v3` is the GitHub-compatible surface, kept faithful enough that unmodified `gh` works against it. `/api/adp` is the native plane, which has no GitHub analogue: workspaces, candidate sets, sessions and checkpoints, the operation log, and evidence bundles.\nCompleteness is enforced, not aspirational: server/src/spec-coverage.test.ts enumerates the server's real route table and fails if this file and the implementation describe different APIs in either direction. Deliberate omissions are the git smart-HTTP wire protocol (specified by git itself and proxied verbatim), the loopback-only receive-path hook endpoints, and the inbound GitHub webhook receiver, whose payload contract is GitHub's.\n`info.version` above is the contract version, and every response carries it in an `ADP-API-Version` header \u2014 including 401s and 404s, so a generated client can pin before it authenticates. The git smart-HTTP routes are the exception: they are proxied verbatim and are not part of this contract. See docs/api-compatibility.md for what a version bump promises.\n",
     "title": "ADP API",
-    "version": "0.1.0"
+    "version": "0.2.0"
   },
   "openapi": "3.1.0",
   "paths": {
@@ -638,6 +638,13 @@
                     "format": "uuid",
                     "type": "string"
                   },
+                  "labels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "What this run was \u2014 vendor, model, tier. Set at open and immutable: they are covered by the run attestation, so a label that could be edited afterwards would leave the envelope and the row disagreeing. There is no update route. Ranking consumers read these rather than parsing `external_ref`, whose format nothing enforces.\n",
+                    "type": "object"
+                  },
                   "orchestrator": {
                     "type": "string"
                   }
@@ -703,7 +710,7 @@
         ],
         "responses": {
           "200": {
-            "description": "One row per run"
+            "description": "One row per run, carrying its `labels`, the single latest `eval`, and `evals` \u2014 the latest result per eval *name*. A run scored on several axes has several results, and a consumer ranking per axis reads `evals`; `eval` alone would show whichever score was recorded last.\n"
           }
         },
         "security": [
@@ -3205,6 +3212,51 @@
           }
         },
         "summary": "Readiness probe (checks DB connectivity)"
+      }
+    },
+    "/version": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "builtAt": {
+                      "format": "date-time",
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "ref": {
+                      "example": "main",
+                      "type": "string"
+                    },
+                    "sha": {
+                      "example": "60be968f0a4a2a4f5f7c0f9e1d2c3b4a5968ab01",
+                      "type": "string"
+                    },
+                    "startedAt": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "uptimeSeconds": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "sha",
+                    "ref",
+                    "startedAt",
+                    "uptimeSeconds"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Build and process identity"
+          }
+        },
+        "summary": "What commit this process is running, captured at deploy time rather than read per request. Unauthenticated for the same reason as the probes and /metrics. `builtAt` is null when the deploy left no stamp.\n"
       }
     }
   },

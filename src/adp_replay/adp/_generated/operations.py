@@ -38,8 +38,8 @@ class Operation(NamedTuple):
         return base_url.rstrip('/') + path
 
 
-SPEC_VERSION: Final = "0.1.0"
-SPEC_DIGEST: Final = "sha256:dcf27a36ca43a2a3063ac5b6d2280b9cdef168cd89eac62ad244cc21db05f75f"
+SPEC_VERSION: Final = "0.2.0"
+SPEC_DIGEST: Final = "sha256:52cc30be797eda5fb6e2e85e0fa0cd57b994742372891138932e0e6e3b4ccd17"
 
 OPERATIONS: Final[dict[str, Operation]] = {
     "delete_repos_by_owner_by_repo_workspaces_by_id": Operation(
