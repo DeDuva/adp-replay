@@ -4,6 +4,11 @@ on:
   push:
     branches: [main]
   pull_request:
+  # The drift check below is only worth having if it runs when nothing here has
+  # changed: ADP moves on its own schedule, not this repository's.
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
 
 jobs:
   check:
@@ -51,7 +56,7 @@ jobs:
   contract:
     runs-on: ubuntu-latest
     env:
-      ADP_REF: f3da971529e5c20e515e3d15c06248672b4539e8
+      ADP_REF: bd0589b489db03851832a451dd1ff1bbead408ef
     services:
       postgres:
         image: postgres:16
@@ -99,6 +104,8 @@ jobs:
               )
           print(f"vendored spec matches pinned ADP at {vendored}")
           PY
+          echo "::notice::This compares the vendored spec against the PINNED ADP, so it cannot" \
+               "detect that ADP itself has moved. The adp-drift job does that."
 
       - name: Install ADP
         working-directory: .adp/server
@@ -137,3 +144,84 @@ jobs:
           # there is no honest way to check tamper-evidence without tampering.
           ADP_DATABASE_URL: postgres://adp:adp@localhost:5432/adp
         run: python -m pytest -m contract
+
+  # Whether ADP has moved out from under the pin.
+  #
+  # The `contract` job above pins ADP by revision and checks the vendored spec
+  # against *that same revision* — which is a tautology: it cannot fail, and
+  # nothing in this repository ever moves the pin. Pinning is still right, but on
+  # its own it means the contract silently ages. As of 2026-08-08 this client was
+  # generated against 0.1.0 while ADP had been serving 0.2.0 for three days, and
+  # nothing said so.
+  #
+  # This job answers the other question — "is the pin still current?" — against
+  # ADP's real default branch. It is advisory: `continue-on-error` so drift
+  # reports rather than blocks, because ADP moving is not a defect in this repo.
+  # It is the notice that should prompt a deliberate `make sync-spec && make
+  # generate` and an ADP_REF bump.
+  adp-drift:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Check out ADP at its default branch
+        uses: actions/checkout@v4
+        with:
+          repository: DeDuva/adp
+          path: .adp-latest
+
+      - name: Compare the vendored contract against ADP's current one
+        run: |
+          python - <<'PY'
+          import json, pathlib, re, subprocess, sys
+
+          vendored = json.loads(pathlib.Path("spec/adp-openapi.json").read_text())["info"]["version"]
+          latest = re.search(
+              r"^  version: (.+)$",
+              pathlib.Path(".adp-latest/spec/openapi.yaml").read_text(),
+              re.MULTILINE,
+          ).group(1).strip()
+
+          pinned_ref = re.search(
+              r"^\s*ADP_REF:\s*(\S+)\s*$",
+              pathlib.Path(".github/workflows/ci.yml").read_text(),
+              re.MULTILINE,
+          ).group(1)
+          head = subprocess.run(
+              ["git", "-C", ".adp-latest", "rev-parse", "HEAD"],
+              capture_output=True, text=True, check=True,
+          ).stdout.strip()
+
+          print(f"vendored contract : {vendored}")
+          print(f"ADP main serves   : {latest}")
+          print(f"pinned ADP_REF    : {pinned_ref}")
+          print(f"ADP main HEAD     : {head}")
+
+          drift = []
+          if vendored != latest:
+              drift.append(f"contract version: vendored {vendored}, ADP main serves {latest}")
+          if pinned_ref != head:
+              behind = subprocess.run(
+                  ["git", "-C", ".adp-latest", "rev-list", "--count", f"{pinned_ref}..HEAD"],
+                  capture_output=True, text=True,
+              ).stdout.strip() or "?"
+              drift.append(f"revision: pin is {behind} commit(s) behind ADP main")
+
+          if drift:
+              for line in drift:
+                  print(f"::warning::ADP drift — {line}")
+              sys.exit(
+                  "ADP has moved out from under the pin.\n"
+                  + "\n".join(f"  - {d}" for d in drift)
+                  + "\n\nThis is advisory, not a failure of this branch. To adopt it deliberately:\n"
+                    "  1. set ADP_REF to ADP main's HEAD above\n"
+                    "  2. make sync-spec && make generate\n"
+                    "  3. commit the regenerated client with the ADP_REF bump — they are one change"
+              )
+          print("pin is current with ADP main")
+          PY
