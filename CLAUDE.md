@@ -13,6 +13,10 @@ not this file. `README.md` is orientation.
 All work lands on `main` through a pull request — including one-line and docs-only
 changes. Commit messages and PR bodies carry no AI attribution.
 
+**Do not regenerate this file with `/init`.** Everything below was decided deliberately
+or learned by getting it wrong, and a codebase scan can see none of it. Edit it by hand;
+`make check-docs` fails if a path named here stops existing.
+
 ## Layout
 
 | Path | What lives there |
@@ -25,11 +29,18 @@ changes. Commit messages and PR bodies carry no AI attribution.
 ## Commands
 
 ```bash
-make check          # lint + types + check-generated + test — the full local gate
+make check          # the gate: check-docs + lint + types + check-generated + test
 make test           # pytest, excluding contract tests
 make test-contract  # contract tests against a live ADP (see below)
 make generate       # regenerate the ADP client from the vendored spec
 ```
+
+**`make check` is the gate in every repo in this line of work** — reach for it first
+rather than reconstructing the per-repo incantation.
+
+`.claude/settings.json` is checked in and holds the shared permission allowlist — the
+targets above plus read-only `gh`. Personal overrides go in `.claude/settings.local.json`,
+which is ignored.
 
 **On this machine, pass the interpreter explicitly.** The Makefile defaults to
 `PY ?= python3`, and system `python3` is 3.14 without `ensurepip`. `.venv/` here was
