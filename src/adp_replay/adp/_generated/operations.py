@@ -39,7 +39,7 @@ class Operation(NamedTuple):
 
 
 SPEC_VERSION: Final = "0.2.0"
-SPEC_DIGEST: Final = "sha256:52cc30be797eda5fb6e2e85e0fa0cd57b994742372891138932e0e6e3b4ccd17"
+SPEC_DIGEST: Final = "sha256:78036caba31889c6e34e4dcca75b6ec9ccc5e8d5af551417651a4c635bd91f30"
 
 OPERATIONS: Final[dict[str, Operation]] = {
     "delete_repos_by_owner_by_repo_workspaces_by_id": Operation(

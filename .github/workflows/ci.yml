@@ -61,7 +61,7 @@ jobs:
   contract:
     runs-on: ubuntu-latest
     env:
-      ADP_REF: bd0589b489db03851832a451dd1ff1bbead408ef
+      ADP_REF: 3404ed4a8b6bc3d47ec48e41bcb1b93427d37cda
     services:
       postgres:
         image: postgres:16
