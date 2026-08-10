@@ -5,8 +5,13 @@ substituted models, producing evidence-gated verdicts about model performance. B
 ADP (`~/dev/adp`), which supplies hash-chained trajectories, signed run attestations, and
 `GET /verify`.
 
-`docs/execution-plan.md` is the plan of record — it is task-by-task, and it decides scope,
-not this file. `README.md` is orientation.
+## Where the plans live
+
+- **`ROADMAP.md`** — the single status ledger: phase states, blockers (each with a
+  verification date), open decisions. A PR that changes phase status updates it in the
+  same PR.
+- **`docs/execution-plan.md`** — the plan of record; task-by-task, it decides scope,
+  not this file. `README.md` is orientation.
 
 ## Process
 

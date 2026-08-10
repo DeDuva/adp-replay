@@ -6,58 +6,19 @@ deliverable and its done-condition. Gates are hard stops.
 
 **Scope:** 2 engineers × 14–16 weeks.
 
-> **Build status, 2026-08-05.** Phases 0–3 are implemented and merged. Both gates pass against a live
-> ADP 0.1.0: **G0** median fidelity 0.951 on the worst in-scope cell (after Amendment 1, see
-> `docs/pre-registration.md`), **G1** 1.4% recording overhead against a 10% budget. The power
-> analysis fixes the corpus at **170 tasks × 3 repetitions**.
+> **Status moved 2026-08-09.** Current phase status, blockers, and open decisions live in
+> [`/ROADMAP.md`](../ROADMAP.md) — the repo's single status ledger, updated in the same PR
+> as any status change, per the planning convention shared by every repo in this line of
+> work. This plan decides scope; it no longer carries dated status blocks, because a stack
+> of status blockquotes at the top of a plan is exactly how the ledger and reality drift
+> apart.
 >
-> Three things below are **not** done. Each is still enforced as unfinished in code rather than
-> merely noted — but **none of them is blocked any more.** See the retry note.
->
-> - **Task 1.3's corpus.** The auditor is complete; `tb2_closed_corpus.json` does not exist, and
->   `build_corpus` refuses to write a corpus below the target. **Unblocked, and now run — with a
->   result that matters: 0 of 80 tasks in `terminal-bench-core` 0.1.1 are closed, 100% attrition,
->   every one of them on a genuine run-time network dependency.** See
->   [`corpus-status.md`](corpus-status.md). The 1.25× audit ratio this plan assumes does not
->   survive contact with that corpus.
-> - **Phase 4, and any real model call.** No provider is contacted anywhere in the package — the
->   agent is an injected protocol. **Not blocked on access:** working Anthropic and Gemini keys sit
->   at `~/.config/squad/` and are in daily use by sibling projects. **Needs a budget decision, and
->   nothing else.**
-> - **The Inspect binding in Task 1.4.** The wrapper is verified against a fake solver of the same
->   shape and says so in its own docstring. **Unblocked — `inspect-ai` installs.**
->
-> Per-task status is in `README.md`; the reasoning behind each decision is in the merged PRs.
-
-> **Retry note, 2026-08-08 — the dependency blocker was never real.**
->
-> All three items above were recorded as *"blocked on a dependency unavailable in the build
-> environment."* That was one mistake generalised into three. The **system** interpreter is Python
-> 3.14 with no `ensurepip`, so `python3 -m venv` fails and the fix needs `sudo apt`, which is
-> unavailable here. But **uv left a managed CPython 3.12 on disk that ships a working `pip`**, and
-> PyPI is reachable.
->
-> ```sh
-> # `python3` cannot create a venv on this machine. Use the uv-managed interpreter:
-> ~/.local/share/uv/python/cpython-3.12-linux-x86_64-gnu/bin/python3.12 -m venv .venv
-> .venv/bin/python -m pip install <package>
-> ```
->
-> Retried 2026-08-08 — both packages previously recorded as impossible:
->
-> | Package | Result |
-> |---|---|
-> | `inspect-ai` | installs — **0.3.253**, imports clean |
-> | `terminal-bench` | installs — exit 0, imports clean |
->
-> Docker works too (runs and pulls images), which Terminal Bench needs. `uv` itself is still absent
-> and is not required. There is still no passwordless `sudo`, so anything needing `apt` remains out
-> of reach.
->
-> **What the mistake cost:** Phase 4 is this project's *primary capability* — fork-at-zero replay
-> under a substituted model — and it has never been executed, on the strength of a blocker that a
-> single command disproves. Nothing above needs new access. The corpus and the Inspect binding need
-> only time; Phase 4 needs a budget number.
+> One lesson from that drift stays here, because it is about how to *read* this plan: on
+> 2026-08-08 three items recorded as "blocked on a dependency unavailable in the build
+> environment" were all disproved by direct test — the system Python cannot build a venv,
+> but the uv-managed CPython 3.12 (see `CLAUDE.md`) always could, and the cost was that the
+> project's primary capability sat unexecuted behind a false blocker. **A recorded blocker
+> without a verification date is a rumor; re-verify before believing it.**
 
 ---
 
