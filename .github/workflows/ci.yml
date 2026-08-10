@@ -46,6 +46,11 @@ jobs:
       - name: Test
         run: python -m pytest -m "not contract"
 
+      # CLAUDE.md names the file that carries each invariant; a rename turns that into a
+      # wrong map without anything failing. Cheap enough to run in every matrix leg.
+      - name: CLAUDE.md paths resolve
+        run: make check-docs
+
   # Contract tests run against a real ADP, pinned by commit sha. Separate job so
   # a contract break is distinguishable at a glance from a unit-test break.
   #

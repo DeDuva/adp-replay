@@ -1,7 +1,7 @@
 .DEFAULT_GOAL := help
 PY ?= python3
 
-.PHONY: help setup lint fmt types test test-contract check clean sync-spec generate check-generated
+.PHONY: help setup lint fmt types test test-contract check check-docs clean sync-spec generate check-generated
 
 help: ## Show this help
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | \
@@ -43,7 +43,10 @@ generate: ## Regenerate the ADP client from the vendored spec
 check-generated: ## Fail if the generated client is stale against the vendored spec
 	$(PY) tools/generate_adp_client.py --check
 
-check: lint types check-generated test ## Lint, type-check, verify codegen, and test
+check-docs: ## Assert CLAUDE.md still points at paths that exist
+	sh tools/check-claude-md.sh
+
+check: check-docs lint types check-generated test ## The gate. Same target name in every repo in this line of work.
 
 clean: ## Remove build and tool caches
 	rm -rf build dist .pytest_cache .ruff_cache .mypy_cache htmlcov .coverage

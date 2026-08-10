@@ -20,7 +20,11 @@ to be worth anything — is [`docs/html/`](docs/html/), published at
 
 ## Status
 
-Phase 0 in progress.
+Phases 0–3 are built and merged; **gates G0 and G1 both pass**. What remains is execution
+rather than construction: the closed corpus has not been built, and Phase 4 — the real
+experiment, with providers actually called — needs a budget decision, not access.
+
+The task-level detail:
 
 - **0.1, 0.2** — manifest models and their self-certifying digest.
 - **0.3a** — the context-fidelity metric and the G0 threshold are

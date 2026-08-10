@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(make help)",
+      "Bash(make check)",
+      "Bash(make check-docs)",
+      "Bash(make lint)",
+      "Bash(make fmt)",
+      "Bash(make types)",
+      "Bash(make test)",
+      "Bash(make test PY=*)",
+      "Bash(make check PY=*)",
+      "Bash(make generate)",
+      "Bash(make check-generated)",
+      "Bash(sh tools/check-claude-md.sh)",
+      "Bash(.venv/bin/python -m pytest*)",
+      "Bash(.venv/bin/python -m ruff*)",
+      "Bash(.venv/bin/python -m mypy*)",
+      "Bash(gh api *)",
+      "Bash(gh pr view *)",
+      "Bash(gh pr diff *)",
+      "Bash(gh run view *)"
+    ]
+  }
+}
