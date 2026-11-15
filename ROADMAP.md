@@ -33,7 +33,10 @@ Phases are this project's milestones. Contract pinned: **ADP 0.2.0**.
 
 ## Now / Next / Later
 
-- **Now:** nothing in flight.
+- **Now: paused 2026-11-15**, nothing in flight. Hibernating with the rest of the
+  agent-research program (`adp`, `duva-bench`). **Resume condition:** a burst whose goal is a new ADP / duva-bench research question. squad-lab is not part of it: `squad` was archived 2026-11-15 and its M15 scope decision closed with it.
+  The weekly CI cron (Mondays 06:00 UTC) keeps running. It spends nothing, and GitHub
+  disables it after 60 days without a push, which is fine while paused.
 - **Next:** the corpus decision (below) — it gates Task 1.3 and sizes Phase 4. Then
   Phase 4, scoped as its own milestone plan before any spend, run on a small slice
   first with cost-per-trial reported before scaling.
